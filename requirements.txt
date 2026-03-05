@@ -1,0 +1,27 @@
+# 核心调度与配置驱动
+PyYAML>=6.0
+
+# LLM 与 API 提取器
+requests>=2.28.0
+
+# 化学分子处理 (RDKit)
+# 注意: 在某些纯净环境下，推荐使用 conda install -c conda-forge rdkit
+rdkit>=2022.03.1
+
+# AI大模型向量化 (BGE-Embeddings)
+torch>=2.0.0
+transformers>=4.30.0
+
+# 向量数据库入库
+pymilvus>=2.3.0
+
+# 流式触网关 (Streaming Gateway)
+fastapi>=0.100.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+
+# PDF 解析与图片处理 (MinerU / DeepSeek-OCR)
+PyMuPDF>=1.23.0
+img2pdf>=0.5.0
+Pillow>=10.0.0
+vllm>=0.4.0

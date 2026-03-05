@@ -1,0 +1,6 @@
+id,name,raw_smiles,raw_selfies,data_type
+test-001,Aspirin,CC(=O)OC1=CC=CC=C1C(=O)O,,drug
+test-002,Paracetamol,CC(=O)NC1=CC=C(O)C=C1,,drug
+test-003,Caffeine,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,,stimulant
+test-004,Vitamin C,C(C(C1C(=C(C(=O)O1)O)O)O)O,,vitamin
+test-005,Benzene,C1=CC=CC=C1,,solvent

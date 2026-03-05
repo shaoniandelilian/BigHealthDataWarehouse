@@ -1,0 +1,54 @@
+# realtime_rag_pipeline/configs/pipeline_chemicals.yaml
+# 【预设一】: 化学分子式纯化与特征提取专线
+# 适用场景：接收前端传入的含噪分子数据（字典），清洗萃取 SMILES 后入库。
+
+pipeline_steps:
+  # -----------------------------------------------------------------
+  # [1] 提取层 (Extraction)
+  # DeepSeek 大模型：利用指定的 Prompt 从字典描述中萃取属性
+  # -----------------------------------------------------------------
+  - name: "DeepSeekExtractor"
+    params:
+      model: "deepseek-chat"  # 使用的模型 (deepseek-chat 或 deepseek-reasoner)
+      api_key: "sk-5734255a6bec46d3be45fcf5c422b79c" # Explicitly provided API Key for daemon execution
+      max_retries: 3          # 遇到限流或网络抖动时的最大重试次数
+      temperature: 0.1        # 采样温度，化学属性提取要求低幻觉，建议 < 0.3
+
+  # -----------------------------------------------------------------
+  # [2] 清洗层 (Transformation)
+  # SMILES 规范化验证：将不规范的 SMILES 通过 RDKit 格式化，也可联网兜底
+  # -----------------------------------------------------------------
+  - name: "SmilesStandardizer"
+    params:
+      rate_limit: 3           # 对外部基准库（如 PubChem）的 API 请求限流次数（每秒）
+      timeout_sec: 15         # 外部请求超时时间，防卡死
+
+  # -----------------------------------------------------------------
+  # [3] 人工介入层 (Human-In-The-Loop) [默认关闭]
+  # 打开下方的注释以开启“半人工审查”。命中此算子时，流转终止并落盘 SQLite。
+  # -----------------------------------------------------------------
+  # - name: "HumanReviewPause"
+  #   params:
+  #     always_pause: true      # 拦截策略：true 为全部拦截，后续可扩展依据置信度拦截
+
+  # -----------------------------------------------------------------
+  # [4] 向量表征层 (Embedding)
+  # BGE 多语言模型：将最终清洗出的描述性短文本全部压缩为密集向量
+  # -----------------------------------------------------------------
+  - name: "BgeEmbedder"
+    params:
+      # 必须指定您的本地大模型物理路径，以防运行时去 HuggingFace 现拉镜像报错
+      model_path: "/data/wuteng/rag-embed/bge-large-zh-v1.5"
+      local_files_only: true  # 强制离线运行
+      normalize_embeddings: true # 是否对产出向量做 L2 归一化（推荐开启，余弦相似度计算更准）
+
+  # -----------------------------------------------------------------
+  # [5] 终态落地层 (Loading)
+  # Milvus 向量数据库持久化入库
+  # -----------------------------------------------------------------
+  - name: "MilvusLoader"
+    params:
+      host: "47.98.227.81"    # Milvus 远程服务器 IP
+      port: "8050"            # Milvus 连接端口
+      collection: "test_wuji" # 目标 Collection 名称（系统会自动建表）
+      dimension: 1024         # 写入的向量维度，与 BgeEmbedder 的输出必须严格对齐
