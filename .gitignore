@@ -42,6 +42,7 @@ data/pipeline_states.db
 data/uploads/
 data/pdf/
 data_process/result/
+test*.py
 
 # IDEs
 .vscode/
