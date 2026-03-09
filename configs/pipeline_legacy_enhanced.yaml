@@ -1,0 +1,54 @@
+# configs/pipeline_legacy_enhanced.yaml
+# 集成老版超级切块器与大模型三漏斗过滤网的强化版流水线
+
+pipeline_steps:
+  # 1. 高级文档提取 (复用 MinerU，抗崩溃高并发抗泄漏版)
+  - name: "MinerUOCRProcessor"
+    params:
+      base_url: "http://47.98.227.81:8000"
+      max_retries: 3
+  
+  # 2. 传统正则提取与抗切割保护分块 (移植自老版本)
+  # 自带 LaTeX 数学公式保护与中文排版空格压缩机制
+  - name: "HybridAdvancedChunkerProcessor"
+    params:
+      max_chunk_size: 384
+      min_chunk_size: 100
+      strip_headers: true
+      min_output_length: 100
+
+  # 3. 三体高过滤漏斗核心 (移植自老版，但包装为异步热拔插网关)
+  # 强制要求：为了保证数据严肃性，去除了原本的容错降级（必须有 Key 才能跑通改层）。
+  - name: "MultiLLMFilterProcessor"
+    params:
+      # 可以直接在配置文件里硬编码各种厂商的 Key 和指定模型名称，如果为空则默认寻找系统环境变量
+      deepseek_api_key: "sk-5f21c61a49ea4dcfa6bfda74dcf8a28e"
+      qwen_api_key: "sk-0228e8728fd34b43b93a831d664ddceb"
+      kimi_api_key: "sk-F0FLPR7UbuCVngJrKjKZM33QpS7upySVtRSlOQiqkoNUwfMX"
+      deepseek_model: "deepseek-chat"
+      qwen_model: "qwen-plus"
+      kimi_model: "moonshot-v1-32k"
+      # 根据有无提供 Key，自动开闭对应环节
+      enable_structure: true
+      enable_semantic: true
+      enable_value: true
+      min_total_score: 0.6
+      max_workers: 15
+
+  # 4. 人工审核节点：在进行开销大的向量化之前，挂起流水线，等待网页端人工介入检查过滤结果
+  - name: "HumanReviewPause"
+    params:
+      pause_message: "等待人工在网页端检查块数据并打回/确认"
+
+  # 5. 原生高并发向量化模型化 (复用)
+  - name: "YuanEmbedderProcessor"
+    params:
+      model_path: "/data/ruanhao/model/KaLM-embedding-multilingual-mini-instruct-v2.5"
+
+  # 6. 高维热插入库向量知识引擎 (复用) 
+  - name: "MilvusTypeLoader"
+    params:
+      host: "47.98.227.81"
+      port: "8050"
+      collection: "legacy_enhanced_docs"
+      batch_size: 500

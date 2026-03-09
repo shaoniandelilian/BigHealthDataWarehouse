@@ -21,7 +21,8 @@ class PdfFeeder:
         logger.info(f"PdfFeeder loading config from {config_path}")
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
-        self.pipeline = Pipeline(cfg["pipeline_steps"])
+        pipeline_name = os.path.basename(config_path)
+        self.pipeline = Pipeline(cfg["pipeline_steps"], pipeline_name=pipeline_name)
 
     def feed_directory(self, folder_path: str):
         """扫描目录里的所有 PDF 下发"""

@@ -61,7 +61,8 @@ def start_simulation(config_path: str):
         return
 
     steps = cfg.get("pipeline_steps", [])
-    pipeline = Pipeline(steps)
+    pipeline_name = os.path.basename(config_path)
+    pipeline = Pipeline(steps, pipeline_name=pipeline_name)
     
     # 构建兼容化学专线和 PDF 专线的通用死数据
     mock_dirty_data = {

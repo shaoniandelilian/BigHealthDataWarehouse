@@ -21,14 +21,14 @@ class HumanReviewPause(BaseProcessor):
 
     def process(self, context: Context) -> Context:
         if self.always_pause:
-            self.logger.info(f"⏸️ HumanReviewPause hit! Marking context {context.id} as pending review...")
+            self.logger.info(f"⏸️ HumanReviewPause hit! Marking context {context.run_id} as pending review...")
             context.is_pending_review = True
             
             # --- Kafka Integration ---
             if self.use_kafka:
                 from utils.kafka_manager import kafka_manager
-                self.logger.info(f"📤 Publishing context {context.id} to Kafka topic: {self.kafka_topic}")
-                kafka_manager.produce(self.kafka_topic, key=context.id, value=context.to_dict())
+                self.logger.info(f"📤 Publishing context {context.run_id} to Kafka topic: {self.kafka_topic}")
+                kafka_manager.produce(self.kafka_topic, key=context.run_id, value=context.to_dict())
             # -------------------------
             
             # --- Metrics ---

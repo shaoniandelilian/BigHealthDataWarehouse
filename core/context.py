@@ -21,6 +21,10 @@ class Context:
         # [新增] 支持人工介入审核的挂起状态
         self.is_pending_review: bool = False
         self.paused_at_step: int = -1
+        
+        # [新增] 支持全局追踪状态链路
+        self.run_id: str = ""
+        self.pipeline_name: str = ""
 
     def mark_invalid(self, reason: str):
         """标记当前数据行为无效，并记录原因。可被流水线拦截。"""
@@ -36,7 +40,9 @@ class Context:
             "errors": self.errors,
             "is_valid": self.is_valid,
             "is_pending_review": self.is_pending_review,
-            "paused_at_step": self.paused_at_step
+            "paused_at_step": self.paused_at_step,
+            "run_id": self.run_id,
+            "pipeline_name": self.pipeline_name
         }
         
     @classmethod
@@ -49,4 +55,6 @@ class Context:
         ctx.is_valid = data.get("is_valid", True)
         ctx.is_pending_review = data.get("is_pending_review", False)
         ctx.paused_at_step = data.get("paused_at_step", -1)
+        ctx.run_id = data.get("run_id", "")
+        ctx.pipeline_name = data.get("pipeline_name", "")
         return ctx

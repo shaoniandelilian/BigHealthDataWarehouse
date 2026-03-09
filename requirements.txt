@@ -25,3 +25,9 @@ PyMuPDF>=1.23.0
 img2pdf>=0.5.0
 Pillow>=10.0.0
 vllm>=0.4.0
+
+# [Added for Real-Time Document AI Pipeline]
+langchain-core>=0.2.0
+langchain-huggingface>=0.0.3
+langchain-experimental>=0.0.60
+sentence-transformers>=3.0.0

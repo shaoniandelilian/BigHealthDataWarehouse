@@ -38,7 +38,8 @@ try:
     
     with open(config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    pipeline_engine = Pipeline(cfg.get("pipeline_steps", []))
+    pipeline_name = os.path.basename(config_path)
+    pipeline_engine = Pipeline(cfg.get("pipeline_steps", []), pipeline_name=pipeline_name)
     logger.info("API Server: Pipeline engine pre-loaded successfully.")
 except Exception as e:
     logger.error(f"Failed to initialize Pipeline from {config_path}: {e}")
@@ -52,11 +53,13 @@ class DocumentEvent(BaseModel):
     raw_smiles: Optional[str] = None
     raw_selfies: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = {}
+    raw_data: Optional[Dict[str, Any]] = {}
 
 class ReviewSubmit(BaseModel):
     """人工审核回传修改过的数据"""
     raw_data: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
+    chunks_override: Optional[Dict[int, str]] = None # 用于单点覆盖 chunk: {0: "修好后的文本", 1: "..."}
 
 def _handle_pipeline_result(event_id: str, final_ctx: Context) -> dict:
     """内部通用函数，处理流水线跑完后的三个出口：通过、挂起待审、报错"""
@@ -143,6 +146,56 @@ def ingest_document_async(event: DocumentEvent, background_tasks: BackgroundTask
     return {"status": "accepted", "message": "Pipeline processing started in background."}
 
 # ==================== API 人工审核专用接口 ====================
+
+@app.post("/api/v1/review/chunks/{context_id}")
+def submit_chunk_review_sync(context_id: str, submission: ReviewSubmit):
+    """
+    【切片级审核专用接口】: 针对被 `ChunkLevelReviewPause` 拦下的特定不确定片段进行人工重写覆盖。
+    submission.chunks_override 示例: {"12": "这句人工优化过了", "45": "另一个句子"}
+    提交后自动清除这些片段的 is_uncertain 标志，如果所有片段都已审毕，则放通流水线往下执行。
+    """
+    logger.info(f"Received chunk-level review override for id: {context_id}")
+    
+    ctx = review_store.get_and_delete_context(context_id)
+    if not ctx:
+        raise HTTPException(status_code=404, detail="Context not found or already submitted/deleted in DB.")
+        
+    if not submission.chunks_override:
+         raise HTTPException(status_code=400, detail="Missing chunks_override data in payload.")
+         
+    chunks = ctx.metadata.get("chunks", [])
+    
+    # 覆盖人工提供的所有文本
+    for idx_str, new_text in submission.chunks_override.items():
+        try:
+            idx = int(idx_str)
+            if 0 <= idx < len(chunks):
+                chunks[idx]["text"] = new_text
+                chunks[idx]["is_uncertain"] = False # 已解除威胁
+        except ValueError:
+            pass
+            
+    # 复查：是否还有剩余的 “不确定切片” 没被覆盖？
+    remaining_uncertain = [i for i, c in enumerate(chunks) if c.get("is_uncertain", False)]
+    if remaining_uncertain:
+        # 还有未解决的疑虑切片，重新冻结它
+        logger.info(f"Pending chunks remaining {remaining_uncertain}. Re-freezing context {context_id}.")
+        review_store.save_pending_context(context_id, ctx)
+        return {
+            "status": "pending_review",
+            "message": f"Updated chunks. However, there are still remaining uncertain chunks: {remaining_uncertain}",
+            "id": context_id
+        }
+    
+    logger.info("All uncertain chunks resolved! Proceeding with pipeline embedder layer...")
+    ctx.is_pending_review = False
+    start_idx = ctx.paused_at_step if ctx.paused_at_step > 0 else 0
+    final_ctx = pipeline_engine.run(ctx, start_index=start_idx)
+    
+    result = _handle_pipeline_result(context_id, final_ctx)
+    if result["status"] == "error":
+         raise HTTPException(status_code=400, detail=result)
+    return result
 
 @app.get("/api/v1/review/pending")
 def get_pending_reviews(limit: int = 50):

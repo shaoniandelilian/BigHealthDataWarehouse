@@ -23,7 +23,8 @@ class FileFeeder:
         # 读取外置配置，动态拉起整条黑盒流水线
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
-        self.pipeline = Pipeline(cfg["pipeline_steps"])
+        pipeline_name = os.path.basename(config_path)
+        self.pipeline = Pipeline(cfg["pipeline_steps"], pipeline_name=pipeline_name)
 
     def feed_csv(self, file_path: str):
         """

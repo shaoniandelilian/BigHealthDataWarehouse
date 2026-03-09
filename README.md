@@ -2,8 +2,6 @@
 
 **ChemRAG-Flow** 是一个面向化学及生物医学大模型场景的**高性能、高可用、插件化**的数据清洗与向量入库准实时流水线。
 
-本项目同时支持“**化学生成特征工程流水线**”与“**PDF长文解析特征提取流水线**”两条并行的预设链路，并自带**人工验证 (Human-in-the-Loop)** 断点续传功能。
-
 ---
 
 ## 🚀 1. 快速启动 (Quick Start)
@@ -11,233 +9,114 @@
 ### 1.1 环境准备
 ```bash
 # 核心与 API 网关依赖包
-pip install requests pyyaml pydantic fastapi uvicorn
+pip install requests pyyaml pydantic fastapi uvicorn flask
 
 # [链路 1: 化学分子式处理依赖]
 # 注意: 在某些纯净环境下，推荐使用 conda install -c conda-forge rdkit
-pip install rdkit torch transformers pymilvus
+pip install rdkit torch transformers pymilvus sentence-transformers
 
 # [链路 2: 获取并解析 PDF 文档依赖]
-pip install PyMuPDF img2pdf Pillow vllm
+pip install PyMuPDF img2pdf Pillow vllm magic-pdf pymupdf4llm
 ```
 
 ### 1.2 环境变量配置
 ```bash
-# 注入您的大模型调度密钥
+# 注入您的大模型调度密钥 (以提供多重管道混合模型分析能力)
 export DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+export QWEN_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+export KIMI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
 ---
 
 ## ⚙️ 2. 流水线装配模版 (Pipeline Presets)
 
-系统已经为您内置了两套完全独立的**预设编排配置模板**。运行不同的项目不再需要修改主代码，一切由 `configs/*.yaml` 决定：
+当前已实现四套完全独立的**预设编排配置模板**。运行不同的项目不再需要修改主代码，一切由 `configs/*.yaml` 决定：
 
 ### 预设一：核心化学分子链路 (`configs/pipeline_chemicals.yaml`)
-用途：针对短文本字典，通过大模型提取 `Source/Function` 字段，随后清洗标准分子 `SMILES`，并进行 1024 维 BGE 向量生成与 Milvus 库落盘。
-**配置文件算子流转：**
-`DeepSeekExtractor` $\to$ `SmilesStandardizer` $\to$ `[HumanReviewPause(可选)]` $\to$ `BgeEmbedder` $\to$ `MilvusLoader`
+用途：针对短文本字典，通过大模型提取 `Source/Function` 字段，随后清洗标准分子 `SMILES`，并进行向量生成与 Milvus 库落盘。
 
 ### 预设二：非结构化文档 PDF 链路 (`configs/pipeline_pdf.yaml`)
-用途：针对学术论文或科研财报 PDF 文件。使用极高资源利用率的挂载 `vLLM` 的本地 `DeepSeek-OCR` 抽取，对 Markdown 进行定长滑动视窗切块（Chunking），最终批量生成特征并落盘。
+用途：针对学术论文或科研财报 PDF 文件。使用极高资源利用率的挂载 `vLLM` 的本地 `DeepSeek-OCR` 抽取，进行定长滑动视窗切块。
+
+### 预设三：本地离线 MinerU 端到端 PDF 解析链路 (`configs/pipeline_doc_ai.yaml`)
+用途：实现从复杂排版 PDF 抽取公式、表格、清洁 Markdown，到语义与结构混合切分。
+
+### 🌟 预设四：【最新力作】混合流控增强版链路 (`configs/pipeline_legacy_enhanced.yaml`)
+用途：结合先进的非阻塞 Pipeline 引擎以及高度复杂的定制化业务需求构建而成的终极产物，既拥有最新架构的吞吐量与热插拔自适应状态管理，同时也完全兼容旧版极限界限清洗能力。
 **配置文件算子流转：**
-`PdfOcrProcessor` $\to$ `MarkdownChunker` $\to$ `[HumanReviewPause(可选)]` $\to$ `BgeEmbedder` $\to$ `MilvusLoader`
+`MinerUOCRProcessor` (并发OCR) $\to$ `HybridAdvancedChunkerProcessor` (包含LaTeX数学公式占位保护与空格压缩机制) $\to$ `MultiLLMFilterProcessor` (DeepSeek+Qwen+Kimi 三体大语言模型层级漏斗并行过滤) $\to$ `HumanReviewPause` (强制挂起系统并转交切片级人工审核) $\to$ `YuanEmbedderProcessor` (KaLM 高维语义向量化与故障安全兜底) $\to$ `MilvusTypeLoader` (异步向量落库防崩溃版)
 
 ---
 
-## 🚥 3. 【核心 API】常驻后台网关与数据接入
+## 🚥 3. 【新功能】真可视化 Web 流控网关
 
-为了在工程中投入生产规模使用，本项目抛弃了传统的“跑一次 Python 文件就退出”的旧模式，提供基于 `FastAPI` 的高性能常驻内存网关。
+除了底层的基于 FastAPI 的纯接口调用，现在引入了全新的**Web 大屏可视化网关 (`streaming/web_upload_gateway.py`)**。
 
-### 3.1 启动 API 网关引擎
+### 3.1 启动可视化流控大屏
 
-您可以指定启动哪一条流水线作为您的主服务挂载在内存中（需进入对应的虚拟环境）：
-
+它会自动依托于底层的轻量追踪库（SQLite `pipeline_states.db`），将耗时极长的全流程 Pipeline 状态动态投射到网页端：
 ```bash
-# [推荐] 启动化学分子长驻服务，监听 8001 端口
-conda activate rag-embed
-export DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-python main.py serve --config configs/pipeline_chemicals.yaml --port 8001
-
-# [推荐] 启动 PDF 解析长驻服务，监听 8000 端口
-
-conda activate deepseek-ocr
-export DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-python main.py serve --config configs/pipeline_pdf.yaml --port 8000
+# 启动 Web Gateway（默认绑定 5001 端口）
+python streaming/web_upload_gateway.py
 ```
-*(提示: 如果想在后台静默持久运行，可使用 `nohup python main.py serve ... &`)*
+**访问:** `http://127.0.0.1:5001` 或您的远程设备IP地址（例如 `http://172.20.8.28:5001`）。
+- **极速上传:** 直接拖拽文件，引擎将瞬间创建一个新的 UUID 时空位点打入后台异步线程。
+- **实时监控:** 仪表盘将展示您的文件正在流经哪个算子（解析 OCR、大模型漏斗...），并在结束后标注各层级的精确耗时。当流水线出错，更会把原始错误信息暴露在全屏供快速纠错。
 
-### 3.2 外部接入单条数据验证 (同步调试)
-
-服务启动后，您可以使用同步接口进行单步阻塞调用。**系统会一直等待大模型提取和向量库录入全部完成，再返回成功报文。**
-⚠️ **必填参数踩坑警告**：如果是化学管线，`raw_smiles` 必须被原封不动地放进 `metadata` 层级里，否则引擎第二阶段（RDKit 清洗）将无法抓取它！
-
-```bash
-# 向化学流水线发送一条测试数据
-curl -X POST http://127.0.0.1:8001/api/v1/ingest/sync \
-     -H "Content-Type: application/json" \
-     -d '{
-           "id": "chem-test-01",
-           "name": "异构甜菊苷",
-           "metadata": {
-               "raw_smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"
-           },
-           "raw_data": {
-               "原始描述": "甜菊苷同分异购物，具有更高的甜度"
-           }
-         }'
-```
-
-### 3.3 大批量 CSV 数据灌流代码 (异步高并发落地)
-
-如果是几万、几十万行 CSV 处理任务，**禁止使用同步接口**（否则单线程会极其缓慢甚至超时断开）。请使用专为高吞吐设计的 **异步非阻塞接入**（`/api/v1/ingest/async`）。
-
-您可以新建一个干净的 Python 脚本（不依赖本仓库环境），用以下模板疯狂将您的 CSV 数据推送给网关引擎：
-
-```python
-import pandas as pd
-import requests
-
-# 您的本地原始脏 CSV
-df = pd.read_csv("my_huge_chemicals.csv")
-
-API_URL = "http://127.0.0.1:8001/api/v1/ingest/async"
-
-for idx, row in df.iterrows():
-    payload = {
-        "id": f"batch-data-{idx}",
-        "name": str(row.get("Compound_Name", "Unknown")),
-        "metadata": {
-            # 必须传入此处供流水线第 2 步去清洗，如果 CSV 里这个字段叫 "SMILES"，请映射过来
-            "raw_smiles": str(row.get("SMILES", ""))
-        },
-        "raw_data": {
-            # 把所有可能对大模型 (DeepSeek) 有帮助的乱七八糟描述全扔这里面
-            "context": str(row.get("Description", ""))
-        }
-    }
-    
-    # 异步请求，瞬间返回！引擎将在后台队列里慢慢消化
-    resp = requests.post(API_URL, json=payload)
-    print(f"Sent {idx}, status: {resp.status_code}")
-```
-
-### 3.4 人工审核断点续发引擎 (Review & Resume)
-
-如果配置文件中装配了 `- name: "HumanReviewPause"` 算子，引擎会在处理到这一步时**立刻暂停**，并将这根数据的记忆存进本地 `logs/pending_reviews.db` 中。人工此时介入：
-
-**接口 A：拉取当前数据库中等待人工审批的数据**
-```http
-GET http://127.0.0.1:8001/api/v1/review/pending?limit=20
-```
-返回一个清晰的数组，包含了需要验证修改内容的元信息（比如，抽取出来的配方或者解析错误的片段）。
-
-**接口 B：人工修改完毕后提交，指令流水线继续跑并入库！**
-```http
-POST http://127.0.0.1:8000/api/v1/review/submit/{提取的数据_ID}
-Content-Type: application/json
-
-{
-    "metadata": {
-        "deepseek_raw_content": "[已人工将错误的氨基改回正确的苯基]"
-    }
-}
-```
-引擎接到这个 POST，会从冻结池里取出这条暂停的流水线载体，把您修正后的对象覆盖掉原有的脏数据，并从 `BgeEmbedder` 开始接着往下流（避开前面昂过的大模型提取步骤），最终优雅进入 Milvus 向量库！
+### 3.2 切片颗粒度的人工干预审核 (Human-in-the-loop)
+配置了 `HumanReviewPause` 拦截指令后，一旦面临极度开销大的向 Milvus 集群写入，引擎会**立刻暂停当前文档的进程**并将上下文冷冻至 `pending_reviews.db` 中生息！
+- 从主面板点击 **[👁️ 进入人工审核工作台]** (`/review`)
+- 面对大模型层层清洗并吐出的密密麻麻的结构切片，您可以体验上帝视角的控制：
+    1. **手动修改**：如果觉得抽取略带瑕疵，文本框直接编辑覆盖。
+    2. **精准切片打回**：对某个无法拯救或者含混不清的切块单独点击 **❌ 驳回此块**，它将变红销毁，跳过送显！
+    3. 一键「🗑️ 直接丢弃整份文档」。
+    4. 点击「✅ 保存修改并放行」，引擎将被即时从断头台唤醒，**带着你修正并剔除后的纯净块**，再次杀向 `YuanEmbedderProcessor` 高维嵌入池并直飞 `Milvus` 落盘！
 
 ---
 
-## 📌 4. 离线工具包 (Offline Tools)
+## � 4. 远程数据库纯净运维指北
 
-即使不借助网关系统，您也可以通过 `main.py` 触发底层的批量跑批任务：
-1. 本地小数据流仿真测试：
-   `python main.py test -c configs/pipeline_chemicals.yaml`
-2. 本地 CSV 单表精准塞入：
-   `python main.py batch_csv --file /path/to/data.csv -c configs/pipeline_chemicals.yaml`
-3. 本地 PDF 目录自动化盲扫入库：
-   `python main.py batch_pdf --dir /path/to/papers/ -c configs/pipeline_pdf.yaml`
+在可视化页面之外，如果你希望通过纯终端黑客般的进行系统的巡检与核实：
 
----
-
-## 🎉 5. 成功演示 (Success Demonstration)
-
-通过以下完整步骤，您可以**见证一条脏数据瞬间走完 DeepSeek提取 -> RDKit重组 -> BGE向量化 -> Milvus落盘 的全过程**：
-
-### ➡️ 步骤 1：启动后台服务集群 (Terminal 1)
-打开第一个终端窗口，激活核心隔离环境，并拉起化学生产线 API 服务：
+### 4.1 访问本地 SQLite 实时流状态追踪库
 ```bash
-# 1. 激活环境
-conda activate rag-embed
+# 进入总体状态追踪数据库 (记录各个文档正在处于什么算子进度，耗时情况)
+sqlite3 data/pipeline_states.db
 
-# 2. (可选) 声明您的 DeepSeek API Key。
-# 注意：如果您已经在 configs/pipeline_chemicals.yaml 里写死了 api_key: "sk-...", 这步可以省略！
-export DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-
-# 3. 启动 API 网关监听 8001 端口
-python main.py serve --config configs/pipeline_chemicals.yaml --port 8001
+# 检查记录表
+sqlite> .mode column
+sqlite> .headers on
+sqlite> SELECT run_id, global_status, updated_at FROM pipeline_legacy_enhanced_state ORDER BY updated_at DESC LIMIT 5;
+sqlite> .quit
 ```
 
-### ➡️ 步骤 2：发送数据 (Terminal 2)
-打开另一个全新的终端窗口，发送以下 JSON 测试有效载荷：
+### 4.2 访问远端 Milvus 万亿级特征数据库
+通过提供的一个快刀斩乱麻检查脚本来嗅探：
 ```bash
-curl -X POST http://127.0.0.1:8001/api/v1/ingest/sync \
-     -H "Content-Type: application/json" \
-     -d '{
-           "id": "csv-test-01",
-           "name": "异构甜菊苷",
-           "metadata": {
-               "raw_smiles": "CC(=O)OC1=CC=CC=C1C(=O)O"
-           },
-           "raw_data": {
-               "原始描述": "甜菊苷同分异购物，具有更高的甜度"
-           }
-         }'
-```
+# 你可以直接在终端通过写一个 python 脚本查询
+cat << 'EOF' > check_milvus.py
+from pymilvus import connections, Collection, utility
 
-### ⬅️ 输出 (The Output)
-*(不到 10 秒后，您的终端将完美打出涵盖所有维度的落盘回执！)*
-```json
-{
-  "status": "success",
-  "message": "Data processed and stored successfully.",
-  "id": "csv-test-01",
-  "metadata_snapshot": {
-    "raw_smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
-    "deepseek_raw_content": "Source: Isosteviol is a diterpenoid derivative obtained from the leaves of the stevia plant...\n\nFunction: Isosteviol functions as a non-caloric sweetener and exhibits a range of pharmacological activities...",
-    "Standardized_SMILES": "CC(=O)OC1=C(C(=O)O)C=CC=C1",
-    "Connectivity_SMILES": "CC(=O)OC1=C(C(=O)O)C=CC=C1",
-    "InChI": "InChI=1S/C9H8O4/c1-6(10)13-8-5-3-2-4-7(8)9(11)12/h2-5H,1H3,(H,11,12)",
-    "InChIKey": "BSYNRYMUTXBXSQ-UHFFFAOYSA-N"
-  }
-}
+connections.connect(alias="default", host="47.98.227.81", port="19530")
+collection_name = "test_pdf" # 根据 yaml 中更改
+if utility.has_collection(collection_name):
+    col = Collection(collection_name)
+    col.load()
+    print(f"✅ 集合 [{collection_name}] 数据总量: {col.num_entities} 条")
+else:
+    print("❌ 集合不存在！")
+EOF
+
+python check_milvus.py
 ```
 
 ---
 
-## 🏢 6. 企业级增强架构 (Enterprise Integration)
+## 🏢 5. 企业级增强架构底座简述 (Enterprise Base)
 
-本项目深度集成了工业级中间件，不仅提升了系统性能，更展示了**分布式、可观测、高性能**的架构深度。
-
-### 6.1 Redis 缓存与性能飞跃 (Caching)
-*   **LLM 缓存**: 利用 Redis 对大模型提取结果进行缓存（基于模型+实体名的 Hash）。
-*   **性能实测**:
-    *   **首次查询 (AI 提取)**: ~20.69s
-    *   **二次命中 (Redis)**: **~0.78s (提升约 96%)**
-*   **成本控制**: 为相同实体的重复入库节省了 100% 的大模型 Token 开销。
-*   *(注: 系统内置 Smart-Mock 模式，若 Redis 未启动将自动降级为进程内内存缓存。)*
-
-### 6.2 Kafka 分布式人工审核 (Event-Driven HITL)
-*   **架构解耦**: 当流水线触发 `HumanReviewPause` 时，任务被序列化投递至 Kafka Topic `chemrag-pending-reviews`。
-*   **异步闭环**: 支持通过 `services/distributed_worker.py` 监听审核结果。审核人员在任何终端提交修改后，Worker 自动唤醒流水线完成入库。
-*   **削峰填谷**: 即使上游有海量并发数据，Kafka 也能确保审核任务不丢失、不溢出。
-
-### 6.3 Prometheus 系统监控 (Observability)
-*   **实时埋点**: 全局集成 `prometheus-client` 埋点。
-*   **监控接口**: 访问 `http://127.0.0.1:8001/metrics` 即可获取：
-    *   `chemrag_pipeline_processed_total`: 各管道吞吐量统计（成功/失败/被拦截）。
-    *   `chemrag_processor_duration_seconds`: 各算子处理时延分布。
-    *   `chemrag_cache_hits_total`: Redis 缓存命中率监控。
-
-> [!IMPORTANT]
-> 这一套 **FastAPI + Kafka + Redis + Prometheus + Milvus** 的组合方案，是工业级 AI 中台的标准参考架构，极具商业落地与简历展示价值。
-
+本项目不仅仅是一套“脚本组合”，更是一套底层经过重重检验的大型中间件微缩版：
+1. **Redis 缓存与性能飞跃**: 对大模型过滤网络等环节，利用哈希机制智能屏蔽重复请求开销。
+2. **Kafka 分布式削峰填谷**: 底蕴支持。若上游迎来千万并发文件，允许将暂停动作反序列化塞回 `chemrag-pending-reviews` Topic，交给几十台消费机器抢夺。
+3. **环境故障自愈与防御性编程**: 对算子内部（如丢失大模型包、丢失 Milvus 连接等）均实现了异常捕获机制，可根据缺失选择使用哑巴占位符（如 768 维 0 向量）放行并留下日志警告，以确保管线整体绝不崩溃（Never Panic）。
+# BigHealthDataWarehouse
