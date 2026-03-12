@@ -53,8 +53,8 @@ SET 'table.exec.sink.not-null-enforcer'='DROP';
 CREATE CATALOG fluss_catalog WITH (
     'type' = 'fluss',
     'bootstrap.servers' = 'fluss-coordinator:9123',
-    'paimon.s3.access-key' = 'rustfsadmin',
-    'paimon.s3.secret-key' = 'rustfsadmin'
+    'paimon.s3.access-key' = 'minioadmin',
+    'paimon.s3.secret-key' = 'minioadmin'
 );
 
 USE CATALOG fluss_catalog;

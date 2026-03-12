@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lakehouse
+
+resources:
+  # Namespace
+  - namespace.yaml
+
+  # Shared config & secrets
+  - configmap.yaml
+  - secret.yaml
+
+  # MinIO Operator Tenant CR
+  - minio/minio-configuration.yaml
+  - minio/tenant.yaml
+
+  # ZooKeeper
+  - zookeeper/service.yaml
+  - zookeeper/statefulset.yaml
+
+  # Flink JAR dependencies (must complete before Flink/Fluss pods start)
+  - flink/jar-downloader-job.yaml
+
+  # Fluss (streaming storage)
+  - fluss/coordinator-service.yaml
+  - fluss/coordinator-deployment.yaml
+  - fluss/tablet-service.yaml
+  - fluss/tablet-statefulset.yaml
+  - fluss/tablet-hpa.yaml
+
+  # Flink (stream processing)
+  - flink/jobmanager-service.yaml
+  - flink/jobmanager-deployment.yaml
+  - flink/taskmanager-deployment.yaml
+  - flink/taskmanager-hpa.yaml
+
+  # Doris Operator DorisCluster CR
+  - doris/fe-configmap.yaml
+  - doris/be-configmap.yaml
+  - doris/doriscluster.yaml
