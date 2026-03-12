@@ -92,6 +92,8 @@ services:
     command: >
       "cp /tmp/jars/*.jar /opt/flink/lib/ 2>/dev/null || true;
        cp /tmp/opt/*.jar /opt/flink/opt/ 2>/dev/null || true;
+       mkdir -p /opt/flink/plugins/s3-fs-hadoop;
+       cp /opt/flink/opt/flink-s3-fs-hadoop-1.20.3.jar /opt/flink/plugins/s3-fs-hadoop/;
        /docker-entrypoint.sh jobmanager"
     environment:
       - HADOOP_CONF_DIR=/opt/hadoop/conf
@@ -99,11 +101,18 @@ services:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flink-jobmanager
+      - AWS_ACCESS_KEY_ID=rustfsadmin
+      - AWS_SECRET_ACCESS_KEY=rustfsadmin
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://rustfs:9000
+      - AWS_ACCESS_KEY=rustfsadmin
+      - AWS_SECRET_KEY=rustfsadmin
     volumes:
       - ./lib:/tmp/jars
       - ./opt:/tmp/opt
       - ./core-site.xml:/opt/hadoop/conf/core-site.xml
       - ./hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar:/opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
+      - ${HOST_DATA_DIR:-/data/pubchem}:/host-data
   flink-taskmanager:
     image: flink:1.20-scala_2.12-java17
     depends_on:
@@ -112,6 +121,8 @@ services:
     command: >
       "cp /tmp/jars/*.jar /opt/flink/lib/ 2>/dev/null || true;
        cp /tmp/opt/*.jar /opt/flink/opt/ 2>/dev/null || true;
+       mkdir -p /opt/flink/plugins/s3-fs-hadoop;
+       cp /opt/flink/opt/flink-s3-fs-hadoop-1.20.3.jar /opt/flink/plugins/s3-fs-hadoop/;
        /docker-entrypoint.sh taskmanager"
     environment:
       - HADOOP_CONF_DIR=/opt/hadoop/conf
@@ -122,12 +133,70 @@ services:
         taskmanager.numberOfTaskSlots: 10
         taskmanager.memory.process.size: 2048m
         taskmanager.memory.task.off-heap.size: 128m
+      - AWS_ACCESS_KEY_ID=rustfsadmin
+      - AWS_SECRET_ACCESS_KEY=rustfsadmin
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://rustfs:9000
+      - AWS_ACCESS_KEY=rustfsadmin
+      - AWS_SECRET_KEY=rustfsadmin
     volumes:
       - ./lib:/tmp/jars
       - ./opt:/tmp/opt
       - ./core-site.xml:/opt/hadoop/conf/core-site.xml
       - ./hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar:/opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
+      - ${HOST_DATA_DIR:-/data/pubchem}:/host-data
+  #end
+
+  #begin Doris
+  doris-fe:
+    image: apache/doris:fe-2.1.8
+    hostname: doris-fe
+    ports:
+      - "8030:8030"
+      - "9030:9030"
+    networks:
+      doris_net:
+        ipv4_address: ${DORIS_FE_IP:-172.30.0.10}
+    environment:
+      - FE_SERVERS=fe1:${DORIS_FE_IP:-172.30.0.10}:9010
+      - FE_ID=1
+      - PRIORITY_NETWORKS=${DORIS_PRIORITY_NETWORKS:-172.30.0.0/24}
+    volumes:
+      - ./doris/fe/meta:/opt/apache-doris/fe/doris-meta
+      - ./doris/fe/log:/opt/apache-doris/fe/log
+    command: >
+      bash -lc "
+      /opt/apache-doris/fe/bin/start_fe.sh --daemon &&
+      tail -f /opt/apache-doris/fe/log/fe.out
+      "
+
+  doris-be:
+    image: apache/doris:be-2.1.8
+    hostname: doris-be
+    depends_on:
+      - doris-fe
+    networks:
+      doris_net:
+        ipv4_address: ${DORIS_BE_IP:-172.30.0.11}
+    environment:
+      - FE_SERVERS=fe1:${DORIS_FE_IP:-172.30.0.10}:9010
+      - BE_ADDR=${DORIS_BE_IP:-172.30.0.11}:9050
+      - PRIORITY_NETWORKS=${DORIS_PRIORITY_NETWORKS:-172.30.0.0/24}
+    volumes:
+      - ./doris/be/storage:/opt/apache-doris/be/storage
+      - ./doris/be/log:/opt/apache-doris/be/log
+    command: >
+      bash -lc "
+      /opt/apache-doris/be/bin/start_be.sh --daemon &&
+      tail -f /opt/apache-doris/be/log/be.out
+      "
   #end
 
 volumes:
   rustfs-data:
+
+networks:
+  doris_net:
+    ipam:
+      config:
+        - subnet: ${DORIS_NET_SUBNET:-172.30.0.0/24}
