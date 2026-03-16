@@ -39,3 +39,25 @@ resources:
   - doris/fe-configmap.yaml
   - doris/be-configmap.yaml
   - doris/doriscluster.yaml
+
+  # MySQL (shared by Airflow & StreamPark)
+  - mysql/secret.yaml
+  - mysql/pvc.yaml
+  - mysql/deployment.yaml
+  - mysql/service.yaml
+
+  # Airflow (batch scheduler)
+  - airflow/secret.yaml
+  - airflow/configmap.yaml
+  - airflow/dags-pvc.yaml
+  - airflow/init-job.yaml
+  - airflow/webserver-deployment.yaml
+  - airflow/webserver-service.yaml
+  - airflow/scheduler-deployment.yaml
+
+  # StreamPark (stream job management)
+  - streampark/secret.yaml
+  - streampark/configmap.yaml
+  - streampark/workspace-pvc.yaml
+  - streampark/console-deployment.yaml
+  - streampark/console-service.yaml

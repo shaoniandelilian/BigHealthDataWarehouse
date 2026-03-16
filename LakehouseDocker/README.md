@@ -4,6 +4,8 @@
 
 - 计算层：Flink:1.20(流批一体)、Doris:3.1.4(查询引擎)
 - 存储层：RustFS/MinIO(对象存储)、Paimon:1.3.1(表格式层)、Fluss:0.9(湖流一体)
+- 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
+- 治理层：~DataHub(数据目录)~(没有PaimonConnector)
 
 ## 部署方案
 
@@ -116,6 +118,10 @@ kubectl -n lakehouse port-forward svc/doriscluster-lakehouse-fe-service 8030:803
 kubectl -n lakehouse port-forward svc/minio-console 9090:9090 --address 0.0.0.0
 # MinIO S3
 kubectl -n lakehouse port-forward svc/minio 9000:80 --address 0.0.0.0
+# Airflow WebUI (admin/admin)
+kubectl -n lakehouse port-forward svc/airflow-webserver 8080:8080 --address 0.0.0.0
+# StreamPark Console (admin/streampark)
+kubectl -n lakehouse port-forward svc/streampark-console 10000:10000 --address 0.0.0.0
 
 # 水平扩缩容
 kubectl -n lakehouse scale statefulset fluss-tablet --replicas=3
@@ -136,9 +142,6 @@ CREATE CATALOG paimon PROPERTIES (
 	"use_path_style" = "true"
 );
 ```
-
-> [!TODO]
-> 部署调度工具
 
 ---
 
