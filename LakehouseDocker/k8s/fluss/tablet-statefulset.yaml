@@ -55,8 +55,7 @@ spec:
               s3.path.style.access: true
               kv.snapshot.interval: 10s
               datalake.format: paimon
-              datalake.paimon.metastore: hive
-              datalake.paimon.uri: thrift://hive-metastore.lakehouse.svc.cluster.local:9083
+              datalake.paimon.metastore: filesystem
               datalake.paimon.warehouse: s3://fluss/paimon
               datalake.paimon.s3.endpoint: http://minio.lakehouse.svc.cluster.local
               datalake.paimon.s3.access-key: minioadmin
