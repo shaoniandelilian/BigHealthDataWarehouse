@@ -5,36 +5,11 @@
 - 计算层：Flink:1.20(流批一体)、Doris:3.1.4(查询引擎)
 - 存储层：RustFS/MinIO(对象存储)、Paimon:1.3.1(表格式层)、Fluss:0.9(湖流一体)
 - 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
-- 治理层：~DataHub(数据目录)~(没有PaimonConnector)
+- 元数据层：Hive(元数据管理)、DataHub(数据目录)
 
 ## 部署方案
 
-### docker-compose(单节点)
-
-```sh
-cd single-node
-
-# 下载依赖
-./download_deps.sh
-
-# 启动
-docker compose up -d
-
-# 启动tiering job(fluss)
-docker compose exec flink-jobmanager \
-  /opt/flink/bin/flink run \
-  /opt/flink/opt/fluss-flink-tiering-0.9.0-incubating.jar \
-  --fluss.bootstrap.servers fluss-coordinator:9123 \
-  --datalake.format paimon \
-  --datalake.paimon.metastore filesystem \
-  --datalake.paimon.warehouse s3://fluss/paimon \
-  --datalake.paimon.s3.endpoint http://rustfs:9000 \
-  --datalake.paimon.s3.access.key rustfsadmin \
-  --datalake.paimon.s3.secret.key rustfsadmin \
-  --datalake.paimon.s3.path.style.access true
-```
-
-### Kubernetes（多节点）
+### Kubernetes
 
 前置依赖：Helm 3、kubectl、minikube（或其他 K8s 集群）
 
@@ -44,7 +19,7 @@ minikube start --cpus=4 --memory=12288 --disk-size=50g
 minikube ssh "sudo sysctl -w vm.max_map_count=2000000 && sudo swapoff -a"
 ```
 
-裸机 kubeadm 集群需安装 StorageClass（minikube 已自带）：
+kubeadm 集群需安装 StorageClass（minikube 已自带）：
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.30/deploy/local-path-storage.yaml
 kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
