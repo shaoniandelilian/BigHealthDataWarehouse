@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dolphinscheduler-master
+  namespace: lakehouse
+  labels:
+    app: dolphinscheduler-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dolphinscheduler-master
+  template:
+    metadata:
+      labels:
+        app: dolphinscheduler-master
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while ! nc -z mysql 3306; do sleep 3; done
+      containers:
+        - name: master
+          image: apache/dolphinscheduler-master:3.2.2
+          envFrom:
+            - configMapRef:
+                name: dolphinscheduler-config
+            - secretRef:
+                name: dolphinscheduler-secret
+          ports:
+            - containerPort: 5678
+              name: rpc
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          readinessProbe:
+            tcpSocket:
+              port: 5678
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5678
+            initialDelaySeconds: 60
+            periodSeconds: 20

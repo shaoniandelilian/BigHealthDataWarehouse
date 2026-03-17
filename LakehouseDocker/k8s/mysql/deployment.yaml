@@ -74,12 +74,12 @@ metadata:
   namespace: lakehouse
 data:
   init-databases.sql: |
-    CREATE DATABASE IF NOT EXISTS airflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CREATE DATABASE IF NOT EXISTS dolphinscheduler CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     CREATE DATABASE IF NOT EXISTS streampark CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     CREATE DATABASE IF NOT EXISTS hive_metastore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-    CREATE USER IF NOT EXISTS 'airflow'@'%' IDENTIFIED BY 'airflow123';
-    GRANT ALL PRIVILEGES ON airflow.* TO 'airflow'@'%';
+    CREATE USER IF NOT EXISTS 'dolphinscheduler'@'%' IDENTIFIED BY 'ds123';
+    GRANT ALL PRIVILEGES ON dolphinscheduler.* TO 'dolphinscheduler'@'%';
 
     CREATE USER IF NOT EXISTS 'streampark'@'%' IDENTIFIED BY 'streampark123';
     GRANT ALL PRIVILEGES ON streampark.* TO 'streampark'@'%';

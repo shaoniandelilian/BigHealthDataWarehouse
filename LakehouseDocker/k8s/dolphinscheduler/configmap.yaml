@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dolphinscheduler-config
+  namespace: lakehouse
+data:
+  DATABASE: "mysql"
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "com.mysql.cj.jdbc.Driver"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/dolphinscheduler?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
+  SPRING_JACKSON_TIME_ZONE: "Asia/Shanghai"
+  REGISTRY_TYPE: "zookeeper"
+  REGISTRY_ZOOKEEPER_CONNECT_STRING: "zookeeper:2181"
+  MASTER_MAX_CPU_LOAD_AVG: "-1"
+  WORKER_MAX_CPU_LOAD_AVG: "-1"
