@@ -21,8 +21,17 @@ spec:
           command:
             - /bin/sh
             - -c
-            - |
-              while ! nc -z mysql 3306; do sleep 3; done
+            - 'while ! nc -z mysql 3306; do sleep 3; done'
+        - name: download-mysql-driver
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - curl -fL -o /driver/mysql-connector-j-8.0.33.jar https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar
+              && echo MySQL driver downloaded.
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /driver
       containers:
         - name: api
           image: apache/dolphinscheduler-api:3.2.2
@@ -39,10 +48,10 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 1Gi
             limits:
-              cpu: "1"
-              memory: 2Gi
+              cpu: '2'
+              memory: 4Gi
           readinessProbe:
             tcpSocket:
               port: 12345
@@ -51,5 +60,12 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 12345
-            initialDelaySeconds: 60
-            periodSeconds: 20
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /opt/dolphinscheduler/libs/mysql-connector-j-8.0.33.jar
+              subPath: mysql-connector-j-8.0.33.jar
+      volumes:
+        - name: mysql-driver
+          emptyDir: {}

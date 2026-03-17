@@ -127,5 +127,9 @@ CREATE CATALOG paimon PROPERTIES (
 
 ---
 
+> [!NOTE]
+> DolphinScheduler默认账号密码：admin dolphinscheduler123，默认地址`http://{base_url}/dolphinscheduler/ui`
+> StreamPark默认账号密码：admin streampark
+
 > [!TIP]
 > 部署后可以用`./test.sql`测试

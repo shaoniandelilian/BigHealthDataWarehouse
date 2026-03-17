@@ -23,10 +23,22 @@ spec:
             - -c
             - |
               echo "Waiting for MySQL to be ready..."
-              while ! nc -z mysql 3306; do
+              while \! nc -z mysql 3306; do
                 sleep 3
               done
               echo "MySQL is ready."
+        - name: download-mysql-driver
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              curl -fL --retry 3 --retry-delay 5 -o /driver/mysql-connector-j-8.0.33.jar \
+                https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar && \
+              echo "MySQL driver downloaded."
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /driver
       containers:
         - name: metastore
           image: apache/hive:standalone-metastore-4.2.0
@@ -42,7 +54,7 @@ spec:
                 -Djavax.jdo.option.ConnectionUserName=hive
                 -Djavax.jdo.option.ConnectionPassword=hive123
             - name: IS_RESUME
-              value: "true"
+              value: "false"
           ports:
             - containerPort: 9083
               name: thrift
@@ -57,15 +69,18 @@ spec:
             - name: hive-site
               mountPath: /opt/hive/conf/hive-site.xml
               subPath: hive-site.xml
+            - name: mysql-driver
+              mountPath: /opt/hive/lib/mysql-connector-j-8.0.33.jar
+              subPath: mysql-connector-j-8.0.33.jar
           readinessProbe:
             tcpSocket:
               port: 9083
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
               port: 9083
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 20
       volumes:
         - name: hive-site
@@ -74,3 +89,5 @@ spec:
             items:
               - key: hive-site.xml
                 path: hive-site.xml
+        - name: mysql-driver
+          emptyDir: {}

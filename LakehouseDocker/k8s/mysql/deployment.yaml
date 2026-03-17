@@ -42,23 +42,19 @@ spec:
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
           livenessProbe:
-            exec:
-              command:
-                - mysqladmin
-                - ping
-                - -h
-                - localhost
-            initialDelaySeconds: 30
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 60
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
           readinessProbe:
-            exec:
-              command:
-                - mysqladmin
-                - ping
-                - -h
-                - localhost
-            initialDelaySeconds: 10
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 20
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
       volumes:
         - name: data
           persistentVolumeClaim:

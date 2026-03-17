@@ -22,7 +22,19 @@ spec:
             - /bin/sh
             - -c
             - |
-              while ! nc -z mysql 3306; do sleep 3; done
+              while \! nc -z mysql 3306; do sleep 3; done
+        - name: download-mysql-driver
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              curl -fL -o /driver/mysql-connector-j-8.0.33.jar \
+                https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar && \
+              echo "MySQL driver downloaded."
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /driver
       containers:
         - name: worker
           image: apache/dolphinscheduler-worker:3.2.2
@@ -51,3 +63,10 @@ spec:
               port: 1234
             initialDelaySeconds: 60
             periodSeconds: 20
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /opt/dolphinscheduler/libs/mysql-connector-j-8.0.33.jar
+              subPath: mysql-connector-j-8.0.33.jar
+      volumes:
+        - name: mysql-driver
+          emptyDir: {}

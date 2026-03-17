@@ -23,9 +23,22 @@ spec:
                 sleep 3
               done
               echo "MySQL is ready."
+        - name: download-mysql-driver
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              curl -fL --retry 3 --retry-delay 5 -o /driver/mysql-connector-j-8.0.33.jar                 https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar &&               echo "MySQL driver downloaded."
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /driver
       containers:
         - name: init-schema
           image: apache/dolphinscheduler-tools:3.2.2
+          env:
+            - name: JAVA_OPTS
+              value: "-server -Xms512m -Xmx512m -Xmn256m"
           command:
             - bash
             - /opt/dolphinscheduler/tools/bin/upgrade-schema.sh
@@ -36,8 +49,15 @@ spec:
                 name: dolphinscheduler-secret
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 200m
+              memory: 768Mi
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: "1"
+              memory: 1536Mi
+          volumeMounts:
+            - name: mysql-driver
+              mountPath: /opt/dolphinscheduler/tools/libs/mysql-connector-j-8.0.33.jar
+              subPath: mysql-connector-j-8.0.33.jar
+      volumes:
+        - name: mysql-driver
+          emptyDir: {}
