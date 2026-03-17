@@ -22,6 +22,11 @@ resources:
   # Flink JAR dependencies (must complete before Flink/Fluss pods start)
   - flink/jar-downloader-job.yaml
 
+  # Hive Metastore (Paimon catalog backend)
+  - hive/configmap.yaml
+  - hive/deployment.yaml
+  - hive/service.yaml
+
   # Fluss (streaming storage)
   - fluss/coordinator-service.yaml
   - fluss/coordinator-deployment.yaml

@@ -3,9 +3,9 @@
 ## 组件
 
 - 计算层：Flink:1.20(流批一体)、Doris:3.1.4(查询引擎)
-- 存储层：RustFS/MinIO(对象存储)、Paimon:1.3.1(表格式层)、Fluss:0.9(湖流一体)
+- 存储层：MinIO:latest(对象存储)、Paimon:1.3.1(表格式层)、Fluss:0.9(湖流一体)
 - 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
-- 元数据层：Hive(元数据管理)、DataHub(数据目录)
+- 元数据层：Hive-MetaStore:4.2.0(元数据管理)、~DataHub(数据目录)(依赖组件过多，暂时搁置)~
 
 ## 部署方案
 
@@ -54,7 +54,7 @@ helm upgrade --install minio-operator minio-operator/operator \
 
 启动集群
 ```sh
-cd multi-node
+cd k8s/
 
 # 部署容器
 kubectl apply -k .
@@ -65,7 +65,8 @@ kubectl -n lakehouse exec deploy/flink-jobmanager -- \
   /opt/flink/opt/fluss-flink-tiering-0.9.0-incubating.jar \
   --fluss.bootstrap.servers fluss-coordinator:9123 \
   --datalake.format paimon \
-  --datalake.paimon.metastore filesystem \
+  --datalake.paimon.metastore hive \
+  --datalake.paimon.uri: thrift://hive-metastore.lakehouse.svc.cluster.local:9083 \
   --datalake.paimon.warehouse s3://fluss/paimon \
   --datalake.paimon.s3.endpoint http://minio.lakehouse.svc.cluster.local \
   --datalake.paimon.s3.access.key minioadmin \
@@ -109,7 +110,8 @@ Doris创建Paimon Catalog
 CREATE CATALOG paimon PROPERTIES (
 	"type" = "paimon",
 	"warehouse" = "s3://fluss/paimon",
-	"paimon.catalog-type" = "filesystem",
+	"paimon.catalog-type" = "hms",
+    "hive.metastore.uris" = "thrift://hive-metastore.lakehouse.svc.cluster.local:9083",
 	"s3.endpoint" = "http://minio:80",
 	"s3.access_key" = "minioadmin",
 	"s3.secret_key" = "minioadmin",

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hive-metastore
+  namespace: lakehouse
+  labels:
+    app: hive-metastore
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9083
+      targetPort: thrift
+      name: thrift
+  selector:
+    app: hive-metastore

@@ -76,11 +76,15 @@ data:
   init-databases.sql: |
     CREATE DATABASE IF NOT EXISTS airflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     CREATE DATABASE IF NOT EXISTS streampark CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CREATE DATABASE IF NOT EXISTS hive_metastore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
     CREATE USER IF NOT EXISTS 'airflow'@'%' IDENTIFIED BY 'airflow123';
     GRANT ALL PRIVILEGES ON airflow.* TO 'airflow'@'%';
 
     CREATE USER IF NOT EXISTS 'streampark'@'%' IDENTIFIED BY 'streampark123';
     GRANT ALL PRIVILEGES ON streampark.* TO 'streampark'@'%';
+
+    CREATE USER IF NOT EXISTS 'hive'@'%' IDENTIFIED BY 'hive123';
+    GRANT ALL PRIVILEGES ON hive_metastore.* TO 'hive'@'%';
 
     FLUSH PRIVILEGES;

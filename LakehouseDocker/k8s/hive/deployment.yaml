@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hive-metastore
+  namespace: lakehouse
+  labels:
+    app: hive-metastore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hive-metastore
+  template:
+    metadata:
+      labels:
+        app: hive-metastore
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for MySQL to be ready..."
+              while ! nc -z mysql 3306; do
+                sleep 3
+              done
+              echo "MySQL is ready."
+      containers:
+        - name: metastore
+          image: apache/hive:standalone-metastore-4.2.0
+          env:
+            - name: SERVICE_NAME
+              value: metastore
+            - name: DB_DRIVER
+              value: mysql
+            - name: SERVICE_OPTS
+              value: >-
+                -Djavax.jdo.option.ConnectionDriverName=com.mysql.cj.jdbc.Driver
+                -Djavax.jdo.option.ConnectionURL=jdbc:mysql://mysql:3306/hive_metastore?useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+                -Djavax.jdo.option.ConnectionUserName=hive
+                -Djavax.jdo.option.ConnectionPassword=hive123
+            - name: IS_RESUME
+              value: "true"
+          ports:
+            - containerPort: 9083
+              name: thrift
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: hive-site
+              mountPath: /opt/hive/conf/hive-site.xml
+              subPath: hive-site.xml
+          readinessProbe:
+            tcpSocket:
+              port: 9083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9083
+            initialDelaySeconds: 60
+            periodSeconds: 20
+      volumes:
+        - name: hive-site
+          configMap:
+            name: hive-metastore-config
+            items:
+              - key: hive-site.xml
+                path: hive-site.xml
