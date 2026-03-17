@@ -11,21 +11,21 @@
 
 ### Kubernetes
 
-前置依赖：Helm 3、kubectl、minikube（或其他 K8s 集群）
+#### 前置依赖：Helm 3、kubectl、minikube（或其他 K8s 集群）
 
-minikube 环境需先配置：
+#### minikube 环境需先配置：
 ```sh
 minikube start --cpus=4 --memory=12288 --disk-size=50g
 minikube ssh "sudo sysctl -w vm.max_map_count=2000000 && sudo swapoff -a"
 ```
 
-kubeadm 集群需安装 StorageClass（minikube 已自带）：
+#### kubeadm 集群需安装 StorageClass（minikube 已自带）：
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.30/deploy/local-path-storage.yaml
 kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 ```
 
-配置Docker镜像
+#### 配置Docker镜像
 ```sh
 for host in <node1-ip> <node2-ip> <node3-ip>; do
   ssh root@$host "
@@ -35,24 +35,27 @@ for host in <node1-ip> <node2-ip> <node3-ip>; do
 done
 ```
 
-安装 Doris Operator, MinIO Operator
-```sh
-helm repo add doris https://charts.selectdb.com || true
-helm repo update doris
-helm upgrade --install doris-operator doris/doris-operator \
-  --namespace doris --create-namespace \
-  --set operator.resources.requests.cpu=200m \
-  --set operator.resources.limits.cpu=1 \
-  --wait --timeout 300s
+#### 安装 Doris Operator, MinIO Operator
 
-helm repo add minio-operator https://operator.min.io || true
-helm repo update minio-operator
-helm upgrade --install minio-operator minio-operator/operator \
-  --namespace minio-operator --create-namespace \
-  --wait --timeout 300s
+1. 在有外网环境的主机下载Helm Charts
+
+```sh
+helm repo add doris https://charts.selectdb.com
+helm repo add minio-operator https://operator.min.io
+helm repo update
+helm pull doris/doris-operator
+helm pull minio-operator/operator
 ```
 
-启动集群
+2. 在服务器安装Helm Charts（配置docker镜像，确保image正常获取）
+
+```sh
+helm upgrade --install doris-operator ./doris-operator-*.tgz -n doris --create-namespace
+helm upgrade --install minio-operator ./operator-*.tgz -n minio-operator --create-namespace
+```
+
+#### 启动集群
+
 ```sh
 cd k8s/
 
@@ -74,7 +77,8 @@ kubectl -n lakehouse exec deploy/flink-jobmanager -- \
   --datalake.paimon.s3.path.style.access true
 ```
 
-检查容器、扩缩容
+#### 检查容器、扩缩容
+
 ```sh
 # 检查 CR 状态
 kubectl -n lakehouse get doriscluster
@@ -105,7 +109,8 @@ kubectl -n lakehouse scale deployment flink-taskmanager --replicas=3
 # Doris/MinIO 通过修改 CR replicas 后 kubectl apply 扩缩容
 ```
 
-Doris创建Paimon Catalog
+#### Doris创建Paimon Catalog
+
 ```sh
 CREATE CATALOG paimon PROPERTIES (
 	"type" = "paimon",
