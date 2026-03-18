@@ -46,14 +46,13 @@ resources:
   - mysql/deployment.yaml
   - mysql/service.yaml
 
-  # DolphinScheduler (batch scheduler)
-  - dolphinscheduler/secret.yaml
-  - dolphinscheduler/configmap.yaml
-  - dolphinscheduler/init-job.yaml
-  - dolphinscheduler/master-deployment.yaml
-  - dolphinscheduler/worker-deployment.yaml
-  - dolphinscheduler/api-deployment.yaml
-  - dolphinscheduler/api-service.yaml
+  # Airflow (batch scheduler)
+  - airflow/secret.yaml
+  - airflow/configmap.yaml
+  - airflow/dags-pvc.yaml
+  - airflow/init-job.yaml
+  - airflow/deployment.yaml
+  - airflow/webserver-service.yaml
 
   # StreamPark (stream job management)
   - streampark/secret.yaml

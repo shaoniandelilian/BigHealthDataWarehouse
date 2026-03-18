@@ -123,6 +123,19 @@ CREATE CATALOG paimon PROPERTIES (
 );
 ```
 
+#### 调度器配置
+
+- 配置中已经将JobManager节点的Flink、Java、core-site.xml、hadoop-uber复制到Airflow、StreamPark节点，环境变量如下
+  - name: FLINK_HOME
+    value: /opt/flink
+  - name: JAVA_HOME
+    value: /opt/flink-java/openjdk
+  - name: HADOOP_CONF_DIR
+    value: /opt/hadoop/conf
+  - name: HADOOP_CLASSPATH
+    value: /opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
+- 在StreamPark的WebUI设置Flink Home、Flink Cluster
+
 ---
 
 > [!NOTE]
