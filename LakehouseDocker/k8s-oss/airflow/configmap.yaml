@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airflow-config
+  namespace: lakehouse
+data:
+  AIRFLOW__CORE__EXECUTOR: "LocalExecutor"
+  AIRFLOW__CORE__DAGS_FOLDER: "/opt/airflow/dags"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+  AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+  AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "30"
+  FLINK_HOME: "/opt/flink"
+  HADOOP_CONF_DIR: "/opt/hadoop/conf"
+  HADOOP_CLASSPATH: "/opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar"

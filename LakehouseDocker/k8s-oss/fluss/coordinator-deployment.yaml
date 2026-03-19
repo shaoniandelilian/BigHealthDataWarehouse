@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluss-coordinator
+  namespace: lakehouse
+  labels:
+    app: fluss-coordinator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluss-coordinator
+  template:
+    metadata:
+      labels:
+        app: fluss-coordinator
+    spec:
+      initContainers:
+        - name: merge-plugins
+          image: apache/fluss:0.9.0-incubating
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Waiting for jar-downloader to complete..."
+              while [ ! -f /tmp/shared-jars/.download-complete ]; do
+                sleep 5
+              done
+              cp /opt/fluss/plugins/paimon/* /merged-plugins/ 2>/dev/null || true
+              cp /tmp/shared-jars/lib/paimon-s3-1.3.1.jar /merged-plugins/ 2>/dev/null || true
+              cp /tmp/shared-jars/lib/flink-sql-connector-hive-3.1.3-1.20.0.jar /merged-plugins/ 2>/dev/null || true
+              ls -la /merged-plugins/
+          volumeMounts:
+            - name: flink-jars
+              mountPath: /tmp/shared-jars
+              readOnly: true
+            - name: paimon-plugin
+              mountPath: /merged-plugins
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      containers:
+        - name: coordinator
+          image: apache/fluss:0.9.0-incubating
+          command:
+            - /bin/bash
+            - -c
+            - |
+              export FLUSS_PROPERTIES="
+              zookeeper.address: zookeeper:2181
+              bind.listeners: FLUSS://${POD_IP}:9123
+              remote.data.dir: s3://fluss/remote-data
+              s3.endpoint: <your-oss-endpoint>
+              s3.access-key: <your-oss-access-key>
+              s3.secret-key: <your-oss-secret-key>
+              s3.path.style.access: false
+              datalake.format: paimon
+              datalake.paimon.metastore: filesystem
+              datalake.paimon.warehouse: s3://fluss/paimon
+              datalake.paimon.s3.endpoint: <your-oss-endpoint>
+              datalake.paimon.s3.access-key: <your-oss-access-key>
+              datalake.paimon.s3.secret-key: <your-oss-secret-key>
+              datalake.paimon.s3.path.style.access: false
+              "
+              exec /docker-entrypoint.sh coordinatorServer
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - containerPort: 9123
+              name: rpc
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: paimon-plugin
+              mountPath: /opt/fluss/plugins/paimon
+      volumes:
+        - name: flink-jars
+          persistentVolumeClaim:
+            claimName: flink-jars
+            readOnly: true
+        - name: paimon-plugin
+          emptyDir: {}

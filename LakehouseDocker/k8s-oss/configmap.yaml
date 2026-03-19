@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lakehouse-config
+  namespace: lakehouse
+data:
+  core-site.xml: |
+    <?xml version="1.0"?>
+    <configuration>
+        <property>
+            <name>fs.s3a.access.key</name>
+            <value><your-oss-access-key></value>
+        </property>
+        <property>
+            <name>fs.s3a.secret.key</name>
+            <value><your-oss-secret-key></value>
+        </property>
+        <property>
+            <name>fs.s3a.endpoint</name>
+            <value><your-oss-endpoint></value>
+        </property>
+        <property>
+            <name>fs.s3a.path.style.access</name>
+            <value>false</value>
+        </property>
+    </configuration>
+
+  fluss-coordinator.properties: |
+    zookeeper.address: zookeeper:2181
+    remote.data.dir: s3://fluss/remote-data
+    s3.endpoint: <your-oss-endpoint>
+    s3.access-key: <your-oss-access-key>
+    s3.secret-key: <your-oss-secret-key>
+    s3.path.style.access: false
+    datalake.format: paimon
+    datalake.paimon.metastore: filesystem
+    datalake.paimon.warehouse: s3://fluss/paimon
+    datalake.paimon.s3.endpoint: <your-oss-endpoint>
+    datalake.paimon.s3.access-key: <your-oss-access-key>
+    datalake.paimon.s3.secret-key: <your-oss-secret-key>
+    datalake.paimon.s3.path.style.access: false
+
+  fluss-tablet.properties: |
+    zookeeper.address: zookeeper:2181
+    data.dir: /tmp/fluss/data
+    remote.data.dir: s3://fluss/remote-data
+    s3.endpoint: <your-oss-endpoint>
+    s3.access-key: <your-oss-access-key>
+    s3.secret-key: <your-oss-secret-key>
+    s3.path.style.access: false
+    kv.snapshot.interval: 10s
+    datalake.format: paimon
+    datalake.paimon.metastore: filesystem
+    datalake.paimon.warehouse: s3://fluss/paimon
+    datalake.paimon.s3.endpoint: <your-oss-endpoint>
+    datalake.paimon.s3.access-key: <your-oss-access-key>
+    datalake.paimon.s3.secret-key: <your-oss-secret-key>
+    datalake.paimon.s3.path.style.access: false

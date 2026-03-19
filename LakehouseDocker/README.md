@@ -3,7 +3,7 @@
 ## 组件
 
 - 计算层：Flink:1.20(流批一体)、Doris:3.1.4(查询引擎)
-- 存储层：MinIO:latest(对象存储)、Paimon:1.3.1(表格式层)、Fluss:0.9(湖流一体)
+- 存储层：AliyunOSS/MinIO:latest(对象存储)、Paimon:1.3.1(表格式层)、Fluss:0.9(湖流一体)
 - 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
 - 元数据层：~Hive-MetaStore:4.2.0(元数据管理)(暂时没必要)~、~DataHub(数据目录)(依赖组件过多，暂时搁置)~
 
@@ -62,7 +62,7 @@ cd k8s/
 # 部署容器
 kubectl apply -k .
 
-# 启动 tiering job
+# 启动 tiering job 记得先创建fluss桶
 kubectl -n lakehouse exec deploy/flink-jobmanager -- \
   /opt/flink/bin/flink run \
   /opt/flink/opt/fluss-flink-tiering-0.9.0-incubating.jar \
@@ -70,43 +70,14 @@ kubectl -n lakehouse exec deploy/flink-jobmanager -- \
   --datalake.format paimon \
   --datalake.paimon.metastore filesystem \
   --datalake.paimon.warehouse s3://fluss/paimon \
-  --datalake.paimon.s3.endpoint http://minio.lakehouse.svc.cluster.local \
-  --datalake.paimon.s3.access.key minioadmin \
-  --datalake.paimon.s3.secret.key minioadmin \
+  --datalake.paimon.s3.endpoint <your-oss-url> \
+  --datalake.paimon.s3.access.key <your-oss-access-key> \
+  --datalake.paimon.s3.secret.key <your-oss-secret-key> \
   --datalake.paimon.s3.path.style.access true
 ```
 
-#### 检查容器、扩缩容
-
-```sh
-# 检查 CR 状态
-kubectl -n lakehouse get doriscluster
-kubectl -n lakehouse get tenant
-
-# 检查所有 Pod
-kubectl -n lakehouse get pods
-
-# 端口转发
-# Flink WebUI
-kubectl -n lakehouse port-forward svc/flink-jobmanager 8081:8081 --address 0.0.0.0
-# Doris MySQL Port
-kubectl -n lakehouse port-forward svc/doriscluster-lakehouse-fe-service 9030:9030 --address 0.0.0.0
-# Doris WebUI
-kubectl -n lakehouse port-forward svc/doriscluster-lakehouse-fe-service 8030:8030 --address 0.0.0.0
-# MinIO Console
-kubectl -n lakehouse port-forward svc/minio-console 9090:9090 --address 0.0.0.0
-# MinIO S3
-kubectl -n lakehouse port-forward svc/minio 9000:80 --address 0.0.0.0
-# Airflow WebUI (admin/admin)
-kubectl -n lakehouse port-forward svc/airflow-webserver 8080:8080 --address 0.0.0.0
-# StreamPark Console (admin/streampark)
-kubectl -n lakehouse port-forward svc/streampark-console 10000:10000 --address 0.0.0.0
-
-# 水平扩缩容
-kubectl -n lakehouse scale statefulset fluss-tablet --replicas=3
-kubectl -n lakehouse scale deployment flink-taskmanager --replicas=3
-# Doris/MinIO 通过修改 CR replicas 后 kubectl apply 扩缩容
-```
+> [!TIP]
+> 如果是AliyunOSS，所有path.style都要设置false
 
 #### Doris创建Paimon Catalog
 
@@ -115,9 +86,9 @@ CREATE CATALOG paimon PROPERTIES (
 	"type" = "paimon",
 	"warehouse" = "s3://fluss/paimon",
 	"paimon.catalog-type" = "filesystem",
-	"s3.endpoint" = "http://minio:80",
-	"s3.access_key" = "minioadmin",
-	"s3.secret_key" = "minioadmin",
+	"s3.endpoint" = "<your-oss-url>",
+	"s3.access_key" = "<your-oss-access-key>",
+	"s3.secret_key" = "<your-oss-secret-key>",
 	"s3.region" = "us-east-1",
 	"use_path_style" = "true"
 );
@@ -139,7 +110,8 @@ CREATE CATALOG paimon PROPERTIES (
 #### TODO
 
 - [ ] Airflow DAGs同步git仓库
-- [ ] 比较Doris DWS实现方案 1. 直接查询Paimon 2. 查询Doris内部
+- [ ] 比较OLAP实现方案 1. Doris查询Paimon 2. Doris查询内部 3. Flink OLAP查询
+- [ ] TB级压力测试，制造数据倾斜，优化k8s配置，设计解决方案
 
 ---
 

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluss-tablet
+  namespace: lakehouse
+  labels:
+    app: fluss-tablet
+spec:
+  clusterIP: None
+  selector:
+    app: fluss-tablet
+  ports:
+    - name: rpc
+      port: 9123
+      targetPort: 9123

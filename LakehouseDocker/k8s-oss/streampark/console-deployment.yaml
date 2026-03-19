@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streampark-console
+  namespace: lakehouse
+  labels:
+    app: streampark-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streampark-console
+  template:
+    metadata:
+      labels:
+        app: streampark-console
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for MySQL to be ready..."
+              while ! nc -z mysql 3306; do
+                sleep 3
+              done
+              echo "MySQL is ready."
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+        - name: copy-flink-env
+          image: flink:1.20-scala_2.12-java17
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cp -a /opt/flink/. /flink-home/ &&
+              cp -a /opt/java/openjdk/. /flink-java/ &&
+              sed -i 's/^    address: localhost$/    address: flink-jobmanager/' /flink-home/conf/config.yaml &&
+              sed -i 's/^  address: 0\.0\.0\.0$/  address: flink-jobmanager/' /flink-home/conf/config.yaml
+          volumeMounts:
+            - name: flink-home
+              mountPath: /flink-home
+            - name: flink-java
+              mountPath: /flink-java
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
+        - name: copy-hadoop-uber
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while [ ! -f /jars/.download-complete ]; do sleep 5; done
+              cp /jars/hadoop-uber/*.jar /hadoop-uber/ 2>/dev/null || true
+          volumeMounts:
+            - name: flink-jars
+              mountPath: /jars
+              readOnly: true
+            - name: hadoop-uber
+              mountPath: /hadoop-uber
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      containers:
+        - name: console
+          image: apache/streampark:2.1.6
+          ports:
+            - containerPort: 10000
+              name: web
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: streampark-secret
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: streampark-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: JAVA_HOME
+              value: /opt/flink-java/openjdk
+            - name: FLINK_HOME
+              value: /opt/flink
+            - name: HADOOP_CONF_DIR
+              value: /opt/hadoop/conf
+            - name: HADOOP_CLASSPATH
+              value: /opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /opt/streampark/conf/application.yml
+              subPath: application.yml
+            - name: workspace
+              mountPath: /opt/streampark/workspace
+            - name: flink-home
+              mountPath: /opt/flink
+            - name: flink-java
+              mountPath: /opt/flink-java/openjdk
+              readOnly: true
+            - name: hadoop-uber
+              mountPath: /opt/hadoop-uber
+              readOnly: true
+            - name: core-site
+              mountPath: /opt/hadoop/conf/core-site.xml
+              subPath: core-site.xml
+          livenessProbe:
+            httpGet:
+              path: /
+              port: web
+            initialDelaySeconds: 180
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: web
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: streampark-config
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: streampark-workspace
+        - name: flink-home
+          emptyDir: {}
+        - name: flink-java
+          emptyDir: {}
+        - name: hadoop-uber
+          emptyDir: {}
+        - name: core-site
+          configMap:
+            name: lakehouse-config
+            items:
+              - key: core-site.xml
+                path: core-site.xml
+        - name: flink-jars
+          persistentVolumeClaim:
+            claimName: flink-jars
+            readOnly: true

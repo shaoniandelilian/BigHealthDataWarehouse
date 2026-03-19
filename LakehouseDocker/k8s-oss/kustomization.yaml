@@ -1,0 +1,58 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lakehouse
+
+resources:
+  # Namespace
+  - namespace.yaml
+
+  # Shared config & secrets
+  - configmap.yaml
+  - secret.yaml
+
+  # ZooKeeper
+  - zookeeper/service.yaml
+  - zookeeper/statefulset.yaml
+
+  # Flink JAR dependencies (must complete before Flink/Fluss pods start)
+  - flink/jar-downloader-job.yaml
+
+  # Fluss (streaming storage)
+  - fluss/coordinator-service.yaml
+  - fluss/coordinator-deployment.yaml
+  - fluss/tablet-service.yaml
+  - fluss/tablet-statefulset.yaml
+  - fluss/tablet-hpa.yaml
+
+  # Flink (stream processing)
+  - flink/jobmanager-service.yaml
+  - flink/jobmanager-deployment.yaml
+  - flink/taskmanager-deployment.yaml
+  - flink/taskmanager-hpa.yaml
+
+  # Doris Operator DorisCluster CR
+  - doris/fe-configmap.yaml
+  - doris/be-configmap.yaml
+  - doris/doriscluster.yaml
+
+  # MySQL (shared by Airflow & StreamPark)
+  - mysql/secret.yaml
+  - mysql/pvc.yaml
+  - mysql/deployment.yaml
+  - mysql/service.yaml
+
+  # Airflow (batch scheduler)
+  - airflow/secret.yaml
+  - airflow/configmap.yaml
+  - airflow/dags-pvc.yaml
+  - airflow/init-job.yaml
+  - airflow/deployment.yaml
+  - airflow/webserver-service.yaml
+
+  # StreamPark (stream job management)
+  - streampark/secret.yaml
+  - streampark/configmap.yaml
+  - streampark/workspace-pvc.yaml
+  - streampark/console-deployment.yaml
+  - streampark/console-service.yaml
