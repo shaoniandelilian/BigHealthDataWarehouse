@@ -1,7 +1,10 @@
-from datetime import datetime, timedelta
+from __future__ import annotations
 
-from airflow import DAG
-from airflow.operators.bash import BashOperator
+import pendulum
+from datetime import timedelta
+
+from airflow.decorators import dag, task
+
 
 default_args = {
     "owner": "airflow",
@@ -9,19 +12,19 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-with DAG(
+
+@dag(
     dag_id="fluss_enriched_orders_snapshot",
     default_args=default_args,
-    start_date=datetime(2024, 1, 1),
+    start_date=pendulum.datetime(2024, 1, 1, tz="UTC"),
     schedule="*/1 * * * *",
     catchup=False,
     tags=["flink", "batch", "fluss", "paimon"],
-) as dag:
-
-    run_flink_sql = BashOperator(
-        task_id="snapshot_enriched_orders",
-        append_env=True,
-        bash_command="""
+)
+def fluss_enriched_orders_snapshot():
+    @task.bash(append_env=True)
+    def snapshot_enriched_orders() -> str:
+        return r"""
         set -e
         set -o pipefail
 
@@ -72,11 +75,15 @@ SELECT `order_key`,
 FROM datalake_enriched_orders;
 SQL
 
-        if grep -q '\\[ERROR\\]' /tmp/flink_sql_run.log; then
+        if grep -q '\[ERROR\]' /tmp/flink_sql_run.log; then
             echo "Flink SQL execution failed!"
             exit 1
         fi
 
         echo "Flink SQL execution succeeded."
-        """,
-    )
+        """
+
+    snapshot_enriched_orders()
+
+
+fluss_enriched_orders_snapshot()
