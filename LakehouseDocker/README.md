@@ -11,7 +11,7 @@
 
 ### Kubernetes
 
-#### 前置依赖：Helm 3、kubectl、minikube（或其他 K8s 集群）
+#### 前置依赖：helm、kubectl、minikube（或其他 K8s 集群）
 
 #### minikube 环境需先配置：
 ```sh
@@ -136,11 +136,15 @@ CREATE CATALOG paimon PROPERTIES (
     value: /opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
 - 在StreamPark的WebUI设置Flink Home、Flink Cluster
 
+#### TODO
+
+- [ ] Airflow DAGs同步git仓库
+- [ ] 比较Doris DWS实现方案 1. 直接查询Paimon 2. 查询Doris内部
+
 ---
 
 > [!NOTE]
-> DolphinScheduler默认账号密码：admin dolphinscheduler123，默认地址`http://{base_url}/dolphinscheduler/ui`
 > StreamPark默认账号密码：admin streampark
 
 > [!TIP]
-> 部署后可以用`./test.sql`测试
+> 部署后可以用`./test.sql`测试Flink+Fluss，用`./test.py`测试Airflow
