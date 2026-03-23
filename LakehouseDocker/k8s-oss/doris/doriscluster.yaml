@@ -16,6 +16,11 @@ spec:
     configMapInfo:
       configMapName: doris-fe-conf
       resolveKey: fe.conf
+    service:
+      type: NodePort
+      servicePorts:
+        - targetPort: 8030
+          nodePort: 30030
     persistentVolumes:
       - mountPath: /opt/apache-doris/fe/doris-meta
         name: fe-meta
