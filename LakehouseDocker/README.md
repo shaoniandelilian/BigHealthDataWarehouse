@@ -54,11 +54,17 @@ helm upgrade --install doris-operator ./doris-operator-*.tgz -n doris --create-n
 helm upgrade --install minio-operator ./operator-*.tgz -n minio-operator --create-namespace
 ```
 
+#### 设置密钥（如果使用AliyunOSS）
+
+```sh
+grep -rl "<your-oss-access-key>" . | xargs sed -i 's/<your-oss-access-key>/真实access-key/g'
+grep -rl "<your-oss-secret-key>" . | xargs sed -i 's/<your-oss-secret-key>/真实secret-key/g'
+grep -rl "<your-oss-endpoint>" . | xargs sed -i 's/<your-oss-endpoint>/真实endpoint/g'
+```
+
 #### 启动集群
 
 ```sh
-cd k8s/
-
 # 部署容器
 kubectl apply -k .
 
@@ -78,6 +84,12 @@ kubectl -n lakehouse exec deploy/flink-jobmanager -- \
 
 > [!TIP]
 > 如果是AliyunOSS，所有path.style都要设置false
+
+#### 启动Airflow DAGs同步脚本
+
+```sh
+./sync_dags_from_github.sh
+```
 
 #### Doris创建Paimon Catalog
 
@@ -109,7 +121,7 @@ CREATE CATALOG paimon PROPERTIES (
 
 #### TODO
 
-- [ ] Airflow DAGs同步git仓库
+- [x] Airflow DAGs同步git仓库
 - [ ] 比较OLAP实现方案 1. Doris查询Paimon 2. Doris查询内部 3. Flink OLAP查询
 - [ ] TB级压力测试，制造数据倾斜，优化k8s配置，设计解决方案
 
