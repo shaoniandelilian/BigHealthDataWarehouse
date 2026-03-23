@@ -44,6 +44,13 @@ spec:
               mountPath: /flink-home
             - name: flink-java
               mountPath: /flink-java
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
         - name: copy-flink-jars
           image: busybox:1.36
           command: ["/bin/sh", "-c"]
@@ -62,6 +69,13 @@ spec:
               mountPath: /flink-home
             - name: hadoop-uber
               mountPath: /hadoop-uber
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
         - name: wait-for-db-init
           image: apache/airflow:2.11.2
           envFrom:

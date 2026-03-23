@@ -39,20 +39,12 @@ spec:
               }
 
               echo "=== Downloading Flink connectors from Maven ==="
-              download "https://repo1.maven.org/maven2/org/apache/fluss/fluss-flink-1.20/0.9.0-incubating/fluss-flink-1.20-0.9.0-incubating.jar" \
-                /jars/lib/fluss-flink-1.20-0.9.0-incubating.jar
               download "https://repo1.maven.org/maven2/org/apache/paimon/paimon-flink-1.20/1.3.1/paimon-flink-1.20-1.3.1.jar" \
                 /jars/lib/paimon-flink-1.20-1.3.1.jar
 
               echo "=== Downloading Flink S3 plugin ==="
               download "https://repo1.maven.org/maven2/org/apache/flink/flink-s3-fs-hadoop/1.20.3/flink-s3-fs-hadoop-1.20.3.jar" \
                 /jars/plugins/flink-s3-fs-hadoop-1.20.3.jar
-
-              echo "=== Downloading Fluss lake plugins ==="
-              download "https://repo1.maven.org/maven2/org/apache/fluss/fluss-lake-paimon/0.9.0-incubating/fluss-lake-paimon-0.9.0-incubating.jar" \
-                /jars/lib/fluss-lake-paimon-0.9.0-incubating.jar
-              download "https://repo1.maven.org/maven2/org/apache/fluss/fluss-fs-s3/0.9.0-incubating/fluss-fs-s3-0.9.0-incubating.jar" \
-                /jars/lib/fluss-fs-s3-0.9.0-incubating.jar
 
               echo "=== Downloading Paimon bundles ==="
               download "https://repo.maven.apache.org/maven2/org/apache/paimon/paimon-bundle/1.3.1/paimon-bundle-1.3.1.jar" \
@@ -68,10 +60,6 @@ spec:
               download "https://repo.maven.apache.org/maven2/org/apache/flink/flink-shaded-hadoop-2-uber/2.8.3-10.0/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar" \
                 /jars/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
 
-              echo "=== Downloading tiering service ==="
-              download "https://repo1.maven.org/maven2/org/apache/fluss/fluss-flink-tiering/0.9.0-incubating/fluss-flink-tiering-0.9.0-incubating.jar" \
-                /jars/opt/fluss-flink-tiering-0.9.0-incubating.jar
-
               echo "=== Downloading flink-faker (optional, best-effort) ==="
               curl -fL --retry 2 --retry-delay 5 --connect-timeout 15 -o /jars/lib/flink-faker-0.5.3.jar \
                 "https://github.com/knaufk/flink-faker/releases/download/v0.5.3/flink-faker-0.5.3.jar" || \
@@ -80,6 +68,13 @@ spec:
               echo "=== All essential JARs downloaded successfully ==="
               ls -lhR /jars/
               touch /jars/.download-complete
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           volumeMounts:
             - name: flink-jars
               mountPath: /jars

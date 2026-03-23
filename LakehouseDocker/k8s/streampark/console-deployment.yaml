@@ -48,6 +48,13 @@ spec:
               mountPath: /flink-home
             - name: flink-java
               mountPath: /flink-java
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
         - name: copy-hadoop-uber
           image: busybox:1.36
           command: ["/bin/sh", "-c"]
@@ -61,6 +68,13 @@ spec:
               readOnly: true
             - name: hadoop-uber
               mountPath: /hadoop-uber
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
       containers:
         - name: console
           image: apache/streampark:2.1.6
@@ -91,7 +105,7 @@ spec:
               cpu: 200m
               memory: 1Gi
             limits:
-              cpu: "2"
+              cpu: "1"
               memory: 2Gi
           volumeMounts:
             - name: config

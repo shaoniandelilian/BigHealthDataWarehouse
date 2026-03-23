@@ -1,0 +1,39 @@
+apiVersion: starrocks.com/v1
+kind: StarRocksCluster
+metadata:
+  name: starrocks
+  namespace: lakehouse
+spec:
+  starRocksFeSpec:
+    image: starrocks/fe-ubuntu:latest
+    replicas: 1
+    requests:
+      cpu: 1
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+    storageVolumes:
+      - name: fe-meta
+        storageSize: 10Gi
+        mountPath: /opt/starrocks/fe/meta
+      - name: fe-log
+        storageSize: 5Gi
+        mountPath: /opt/starrocks/fe/log
+
+  starRocksBeSpec:
+    image: starrocks/be-ubuntu:latest
+    replicas: 1
+    requests:
+      cpu: 1
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+    storageVolumes:
+      - name: be-data
+        storageSize: 50Gi
+        mountPath: /opt/starrocks/be/storage
+      - name: be-log
+        storageSize: 5Gi
+        mountPath: /opt/starrocks/be/log

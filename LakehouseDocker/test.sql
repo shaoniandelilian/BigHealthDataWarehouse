@@ -50,27 +50,31 @@ CREATE TEMPORARY TABLE `source_nation` (
 -- drop records silently if a null value would have to be inserted into a NOT NULL column
 SET 'table.exec.sink.not-null-enforcer'='DROP';
 
-CREATE CATALOG fluss_catalog WITH (
-    'type' = 'fluss',
-    'bootstrap.servers' = 'fluss-coordinator:9123',
-    'paimon.s3.access-key' = '<your-oss-access-key>',
-    'paimon.s3.secret-key' = '<your-oss-secret-key>'
+CREATE CATALOG paimon_catalog WITH (
+    'type' = 'paimon',
+    'warehouse' = 's3://fluss/paimon',
+    's3.endpoint' = '<your-oss-endpoint>',
+    's3.access-key' = '<your-oss-access-key>',
+    's3.secret-key' = '<your-oss-secret-key>',
+    's3.path.style.access' = 'false'
 );
 
-USE CATALOG fluss_catalog;
+USE CATALOG paimon_catalog;
 
-CREATE TABLE fluss_order (
+CREATE DATABASE IF NOT EXISTS test_db;
+USE test_db;
+
+CREATE TABLE paimon_order (
     `order_key` BIGINT,
     `cust_key` INT NOT NULL,
     `total_price` DECIMAL(15, 2),
     `order_date` DATE,
     `order_priority` STRING,
     `clerk` STRING,
-    `ptime` AS PROCTIME(),
     PRIMARY KEY (`order_key`) NOT ENFORCED
 );
 
-CREATE TABLE fluss_customer (
+CREATE TABLE paimon_customer (
     `cust_key` INT NOT NULL,
     `name` STRING,
     `phone` STRING,
@@ -80,7 +84,7 @@ CREATE TABLE fluss_customer (
     PRIMARY KEY (`cust_key`) NOT ENFORCED
 );
 
-CREATE TABLE fluss_nation (
+CREATE TABLE paimon_nation (
   `nation_key` INT NOT NULL,
   `name`       STRING,
    PRIMARY KEY (`nation_key`) NOT ENFORCED
@@ -88,13 +92,13 @@ CREATE TABLE fluss_nation (
 
 EXECUTE STATEMENT SET
 BEGIN
-    INSERT INTO fluss_nation SELECT * FROM `default_catalog`.`default_database`.source_nation;
-    INSERT INTO fluss_customer SELECT * FROM `default_catalog`.`default_database`.source_customer;
-    INSERT INTO fluss_order SELECT * FROM `default_catalog`.`default_database`.source_order;
+    INSERT INTO paimon_nation SELECT * FROM `default_catalog`.`default_database`.source_nation;
+    INSERT INTO paimon_customer SELECT * FROM `default_catalog`.`default_database`.source_customer;
+    INSERT INTO paimon_order SELECT * FROM `default_catalog`.`default_database`.source_order;
 END;
 
 
-CREATE TABLE datalake_enriched_orders (
+CREATE TABLE enriched_orders (
     `order_key` BIGINT,
     `cust_key` INT NOT NULL,
     `total_price` DECIMAL(15, 2),
@@ -107,14 +111,11 @@ CREATE TABLE datalake_enriched_orders (
     `cust_mktsegment` STRING,
     `nation_name` STRING,
     PRIMARY KEY (`order_key`) NOT ENFORCED
-) WITH (
-    'table.datalake.enabled' = 'true',
-    'table.datalake.freshness' = '30s'
 );
 
 
--- insert tuples into datalake_enriched_orders
-INSERT INTO datalake_enriched_orders
+-- insert tuples into enriched_orders (batch join)
+INSERT INTO enriched_orders
 SELECT o.order_key,
        o.cust_key,
        o.total_price,
@@ -126,10 +127,10 @@ SELECT o.order_key,
        c.acctbal,
        c.mktsegment,
        n.name
-FROM fluss_order o
-LEFT JOIN fluss_customer FOR SYSTEM_TIME AS OF `o`.`ptime` AS `c`
+FROM paimon_order o
+LEFT JOIN paimon_customer c
     ON o.cust_key = c.cust_key
-LEFT JOIN fluss_nation FOR SYSTEM_TIME AS OF `o`.`ptime` AS `n`
+LEFT JOIN paimon_nation n
     ON c.nation_key = n.nation_key;
 
 
@@ -140,10 +141,7 @@ SET 'sql-client.execution.result-mode' = 'tableau';
 SET 'execution.runtime-mode' = 'batch';
 
 -- query snapshots in paimon
-SELECT snapshot_id, total_record_count FROM datalake_enriched_orders$lake$snapshots;
+SELECT snapshot_id, total_record_count FROM enriched_orders$snapshots;
 
--- to sum prices of all orders in paimon
-SELECT sum(total_price) as sum_price FROM datalake_enriched_orders$lake;
-
--- to sum prices of all orders in fluss and paimon
-SELECT sum(total_price) as sum_price FROM datalake_enriched_orders;
+-- sum prices of all enriched orders
+SELECT sum(total_price) as sum_price FROM enriched_orders;

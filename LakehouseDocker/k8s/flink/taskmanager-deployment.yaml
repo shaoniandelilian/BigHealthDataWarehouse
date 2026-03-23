@@ -43,6 +43,13 @@ spec:
               mountPath: /flink-plugins
             - name: flink-hadoop
               mountPath: /flink-hadoop
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
       containers:
         - name: taskmanager
           image: flink:1.20-scala_2.12-java17
@@ -66,13 +73,11 @@ spec:
             - name: FLINK_PROPERTIES
               value: |
                 jobmanager.rpc.address: flink-jobmanager
-                taskmanager.numberOfTaskSlots: 10
+                taskmanager.numberOfTaskSlots: 4
                 taskmanager.memory.process.size: 2048m
                 taskmanager.memory.task.off-heap.size: 128m
             - name: AWS_REGION
               value: us-east-1
-            - name: AWS_ENDPOINT_URL
-              value: http://minio.lakehouse.svc.cluster.local
           envFrom:
             - secretRef:
                 name: s3-credentials

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: starrocks-fe-external
+  namespace: lakehouse
+  labels:
+    app: starrocks
+spec:
+  type: NodePort
+  ports:
+    - name: mysql
+      port: 9030
+      targetPort: 9030
+      nodePort: 30930
+    - name: http
+      port: 8030
+      targetPort: 8030
+      nodePort: 30830
+  selector:
+    app.starrocks.ownerreference/name: starrocks-fe
+    app.kubernetes.io/component: fe
