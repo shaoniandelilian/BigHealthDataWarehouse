@@ -1,54 +1,68 @@
+SET 'table.exec.sink.not-null-enforcer'='DROP';
+SET 'table.exec.sink.upsert-materialize' = 'NONE';
+SET 'execution.checkpointing.interval' = '10s';
+
 CREATE TEMPORARY TABLE source_order (
     `order_key` BIGINT,
     `cust_key` INT,
     `total_price` DECIMAL(15, 2),
-    `order_date` DATE,
-    `order_priority` STRING,
-    `clerk` STRING
+    `order_date` TIMESTAMP(3),
+    `order_priority_code` INT,
+    `clerk_code` INT
 ) WITH (
-  'connector' = 'faker',
-  'rows-per-second' = '10',
-  'number-of-rows' = '10000',
-  'fields.order_key.expression' = '#{number.numberBetween ''0'',''100000000''}',
-  'fields.cust_key.expression' = '#{number.numberBetween ''0'',''20''}',
-  'fields.total_price.expression' = '#{number.randomDouble ''3'',''1'',''1000''}',
-  'fields.order_date.expression' = '#{date.past ''100'' ''DAYS''}',
-  'fields.order_priority.expression' = '#{regexify ''(low|medium|high){1}''}',
-  'fields.clerk.expression' = '#{regexify ''(Clerk1|Clerk2|Clerk3|Clerk4){1}''}'
+  'connector' = 'datagen',
+  'rows-per-second' = '1000',
+  'number-of-rows' = '100000',
+  'fields.order_key.min' = '0',
+  'fields.order_key.max' = '100000000',
+  'fields.cust_key.min' = '0',
+  'fields.cust_key.max' = '20',
+  'fields.total_price.min' = '1',
+  'fields.total_price.max' = '1000',
+  'fields.order_priority_code.min' = '1',
+  'fields.order_priority_code.max' = '3',
+  'fields.clerk_code.min' = '1',
+  'fields.clerk_code.max' = '4'
 );
 
 CREATE TEMPORARY TABLE source_customer (
     `cust_key` INT,
-    `name` STRING,
-    `phone` STRING,
+    `name_code` INT,
+    `phone_code` BIGINT,
     `nation_key` INT NOT NULL,
     `acctbal` DECIMAL(15, 2),
-    `mktsegment` STRING,
+    `mktsegment_code` INT,
     PRIMARY KEY (`cust_key`) NOT ENFORCED
 ) WITH (
-  'connector' = 'faker',
+  'connector' = 'datagen',
   'number-of-rows' = '200',
-  'fields.cust_key.expression' = '#{number.numberBetween ''0'',''20''}',
-  'fields.name.expression' = '#{funnyName.name}',
-  'fields.nation_key.expression' = '#{number.numberBetween ''1'',''5''}',
-  'fields.phone.expression' = '#{phoneNumber.cellPhone}',
-  'fields.acctbal.expression' = '#{number.randomDouble ''3'',''1'',''1000''}',
-  'fields.mktsegment.expression' = '#{regexify ''(AUTOMOBILE|BUILDING|FURNITURE|MACHINERY|HOUSEHOLD){1}''}'
+  'fields.cust_key.min' = '0',
+  'fields.cust_key.max' = '20',
+  'fields.name_code.min' = '1',
+  'fields.name_code.max' = '10',
+  'fields.phone_code.min' = '1000000000',
+  'fields.phone_code.max' = '9999999999',
+  'fields.nation_key.min' = '1',
+  'fields.nation_key.max' = '5',
+  'fields.acctbal.min' = '1',
+  'fields.acctbal.max' = '1000',
+  'fields.mktsegment_code.min' = '1',
+  'fields.mktsegment_code.max' = '5'
 );
 
 CREATE TEMPORARY TABLE `source_nation` (
   `nation_key` INT NOT NULL,
-  `name` STRING,
+  `name_code` INT,
    PRIMARY KEY (`nation_key`) NOT ENFORCED
 ) WITH (
-  'connector' = 'faker',
+  'connector' = 'datagen',
   'number-of-rows' = '100',
-  'fields.nation_key.expression' = '#{number.numberBetween ''1'',''5''}',
-  'fields.name.expression' = '#{regexify ''(CANADA|JORDAN|CHINA|UNITED|INDIA){1}''}'
+  'fields.nation_key.min' = '1',
+  'fields.nation_key.max' = '5',
+  'fields.name_code.min' = '1',
+  'fields.name_code.max' = '5'
 );
 
--- drop records silently if a null value would have to be inserted into a NOT NULL column
-SET 'table.exec.sink.not-null-enforcer'='DROP';
 
 CREATE CATALOG paimon_catalog WITH (
     'type' = 'paimon',
@@ -92,9 +106,44 @@ CREATE TABLE paimon_nation (
 
 EXECUTE STATEMENT SET
 BEGIN
-    INSERT INTO paimon_nation SELECT * FROM `default_catalog`.`default_database`.source_nation;
-    INSERT INTO paimon_customer SELECT * FROM `default_catalog`.`default_database`.source_customer;
-    INSERT INTO paimon_order SELECT * FROM `default_catalog`.`default_database`.source_order;
+    INSERT INTO paimon_nation
+    SELECT nation_key,
+           CASE name_code
+               WHEN 1 THEN 'CANADA'
+               WHEN 2 THEN 'JORDAN'
+               WHEN 3 THEN 'CHINA'
+               WHEN 4 THEN 'UNITED STATES'
+               ELSE 'INDIA'
+           END
+    FROM `default_catalog`.`default_database`.source_nation;
+
+    INSERT INTO paimon_customer
+    SELECT cust_key,
+           CONCAT('Customer_', CAST(name_code AS STRING)),
+           CONCAT('+1-', CAST(phone_code AS STRING)),
+           nation_key,
+           acctbal,
+           CASE mktsegment_code
+               WHEN 1 THEN 'AUTOMOBILE'
+               WHEN 2 THEN 'BUILDING'
+               WHEN 3 THEN 'FURNITURE'
+               WHEN 4 THEN 'MACHINERY'
+               ELSE 'HOUSEHOLD'
+           END
+    FROM `default_catalog`.`default_database`.source_customer;
+
+    INSERT INTO paimon_order
+    SELECT order_key,
+           cust_key,
+           total_price,
+           CAST(order_date AS DATE),
+           CASE order_priority_code
+               WHEN 1 THEN 'low'
+               WHEN 2 THEN 'medium'
+               ELSE 'high'
+           END,
+           CONCAT('Clerk', CAST(clerk_code AS STRING))
+    FROM `default_catalog`.`default_database`.source_order;
 END;
 
 
@@ -133,15 +182,9 @@ LEFT JOIN paimon_customer c
 LEFT JOIN paimon_nation n
     ON c.nation_key = n.nation_key;
 
-
--- use tableau result mode
-SET 'sql-client.execution.result-mode' = 'tableau';
-
 -- switch to batch mode
 SET 'execution.runtime-mode' = 'batch';
-
--- query snapshots in paimon
-SELECT snapshot_id, total_record_count FROM enriched_orders$snapshots;
+SET 'sql-client.execution.result-mode' = 'tableau';
 
 -- sum prices of all enriched orders
 SELECT sum(total_price) as sum_price FROM enriched_orders;

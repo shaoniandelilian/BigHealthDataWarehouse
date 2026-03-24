@@ -100,15 +100,6 @@ CREATE EXTERNAL CATALOG paimon_catalog PROPERTIES (
 starrocks://root@starrocks-fe-service.lakehouse.svc.cluster.local:9030/paimon_catalog.fluss
 ```
 
-#### 访问入口
-
-- Airflow WebUI: `http://<node-ip>:30080`
-- StreamPark WebUI: `http://<node-ip>:30100`
-- Superset WebUI: `http://<node-ip>:30088`
-- MySQL: `<node-ip>:30306`
-- StarRocks FE HTTP: `http://<node-ip>:30830`
-- StarRocks FE MySQL: `<node-ip>:30930`
-
 #### 启动Airflow DAGs同步脚本
 
 ```sh
@@ -123,11 +114,19 @@ starrocks://root@starrocks-fe-service.lakehouse.svc.cluster.local:9030/paimon_ca
 
 ---
 
-> [!NOTE]
-> StreamPark默认账号密码：admin streampark
+#### 访问入口
+
+- Airflow WebUI: `http://<node-ip>:30080`
+- StreamPark WebUI: `http://<node-ip>:30100`
+- Superset WebUI: `http://<node-ip>:30088`
+- StarRocks FE HTTP: `http://<node-ip>:30830`
+- StarRocks FE MySQL: `<node-ip>:30930`
 
 > [!NOTE]
+> Airflow默认账号密码：admin admin
+> StreamPark默认账号密码：admin streampark
 > Superset默认账号密码：admin admin123
+> StarRocks默认账号密码：root 无
 
 > [!TIP]
-> 部署后可以用`./test.sql`测试Flink+Paimon，用`./test.py`测试Airflow
+> 部署后可以用`./test.sql`测试Flink+Paimon
