@@ -76,7 +76,7 @@ spec:
             limits:
               cpu: 200m
               memory: 256Mi
-        - name: wait-for-db-init
+        - name: db-init
           image: apache/airflow:2.11.2
           envFrom:
             - configMapRef:
@@ -87,18 +87,25 @@ spec:
             - bash
             - -c
             - |
-              echo "Waiting for DB to be initialized..."
-              while ! airflow db check 2>/dev/null; do
-                sleep 5
-              done
-              echo "DB is ready."
+              set -e
+              echo "Running airflow db migrate..."
+              airflow db migrate
+              echo "Creating admin user..."
+              airflow users create \
+                --username admin \
+                --password admin \
+                --firstname Admin \
+                --lastname User \
+                --role Admin \
+                --email admin@lakehouse.local || true
+              echo "Airflow init complete."
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: 500m
+              cpu: 200m
               memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
       containers:
         - name: scheduler
           image: apache/airflow:2.11.2

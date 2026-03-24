@@ -30,7 +30,6 @@ resources:
   - airflow/secret.yaml
   - airflow/configmap.yaml
   - airflow/dags-pvc.yaml
-  - airflow/init-job.yaml
   - airflow/deployment.yaml
   - airflow/webserver-service.yaml
 
