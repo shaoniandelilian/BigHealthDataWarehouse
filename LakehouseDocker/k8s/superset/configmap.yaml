@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: superset-config
+  namespace: lakehouse
+data:
+  superset_config.py: |
+    import os
+
+
+    SECRET_KEY = os.environ["SUPERSET_SECRET_KEY"]
+    SQLALCHEMY_DATABASE_URI = os.environ["SUPERSET_DATABASE_URI"]
+
+    ENABLE_PROXY_FIX = True
+    TALISMAN_ENABLED = False
+
+    FEATURE_FLAGS = {
+        "ENABLE_TEMPLATE_PROCESSING": True,
+    }

@@ -20,7 +20,7 @@ resources:
   - flink/taskmanager-deployment.yaml
   - flink/taskmanager-hpa.yaml
 
-  # MySQL (shared by Airflow & StreamPark)
+  # MySQL (shared by Airflow, StreamPark & Superset)
   - mysql/secret.yaml
   - mysql/pvc.yaml
   - mysql/deployment.yaml
@@ -40,6 +40,12 @@ resources:
   - streampark/workspace-pvc.yaml
   - streampark/console-deployment.yaml
   - streampark/console-service.yaml
+
+  # Superset (BI dashboard)
+  - superset/secret.yaml
+  - superset/configmap.yaml
+  - superset/deployment.yaml
+  - superset/service.yaml
 
   # StarRocks (OLAP engine, via operator)
   - starrocks/operator.yaml

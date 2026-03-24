@@ -6,7 +6,7 @@
 - 存储层：AliyunOSS(对象存储)、Paimon:1.3.1(表格式层)
 - 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
 - 元数据层：TODO...
-- 应用层：Superset(看板搭建)
+- 应用层：Superset:6.0.0(看板搭建)
 
 ## 部署方案
 
@@ -52,7 +52,7 @@ helm pull starrocks/kube-starrocks
 helm upgrade --install starrocks ./kube-starrocks-*.tgz -n starrocks --create-namespace
 ```
 
-#### 设置密钥（如果使用AliyunOSS）
+#### 设置密钥
 
 ```sh
 grep -rl "<your-oss-access-key>" . | xargs sed -i 's/<your-oss-access-key>/真实access-key/g'
@@ -63,21 +63,7 @@ grep -rl "<your-oss-endpoint>" . | xargs sed -i 's/<your-oss-endpoint>/真实end
 #### 启动集群
 
 ```sh
-kubectl apply -k .
-```
-
-#### 启动Airflow DAGs同步脚本
-
-```sh
-./sync_dags_from_github.sh
-```
-
-#### StarRocks创建Paimon Catalog
-
-```sh
-CREATE CATALOG paimon PROPERTIES (
-
-);
+kubectl apply -k k8s
 ```
 
 #### 调度器配置
@@ -93,6 +79,42 @@ CREATE CATALOG paimon PROPERTIES (
     value: /opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
 - 在StreamPark的WebUI设置Flink Home、Flink Cluster
 
+#### StarRocks创建Paimon Catalog
+
+```sh
+CREATE EXTERNAL CATALOG paimon_catalog PROPERTIES (
+    "type" = "paimon",
+    "paimon.catalog.type" = "filesystem",
+    "paimon.catalog.warehouse" = "s3://fluss/paimon",
+    "aws.s3.enable_ssl" = "true",
+    "aws.s3.enable_path_style_access" = "false",
+    "aws.s3.endpoint" = "<your-oss-endpoint>",
+    "aws.s3.access_key" = "<your-oss-access-key>",
+    "aws.s3.secret_key" = "<your-oss-secret-key>"
+);
+```
+
+#### Superset连接StarRocks
+
+```
+starrocks://root@starrocks-fe-service.lakehouse.svc.cluster.local:9030/paimon_catalog.fluss
+```
+
+#### 访问入口
+
+- Airflow WebUI: `http://<node-ip>:30080`
+- StreamPark WebUI: `http://<node-ip>:30100`
+- Superset WebUI: `http://<node-ip>:30088`
+- MySQL: `<node-ip>:30306`
+- StarRocks FE HTTP: `http://<node-ip>:30830`
+- StarRocks FE MySQL: `<node-ip>:30930`
+
+#### 启动Airflow DAGs同步脚本
+
+```sh
+./sync_dags_from_github.sh
+```
+
 #### TODO
 
 - [x] Airflow DAGs同步git仓库
@@ -103,6 +125,9 @@ CREATE CATALOG paimon PROPERTIES (
 
 > [!NOTE]
 > StreamPark默认账号密码：admin streampark
+
+> [!NOTE]
+> Superset默认账号密码：admin admin123
 
 > [!TIP]
 > 部署后可以用`./test.sql`测试Flink+Paimon，用`./test.py`测试Airflow
