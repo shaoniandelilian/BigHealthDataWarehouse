@@ -58,7 +58,8 @@ spec:
             - |
               cp /init-lib/*.jar /opt/flink/lib/ 2>/dev/null || true
               cp /init-opt/*.jar /opt/flink/opt/ 2>/dev/null || true
-              cp /init-plugins/*.jar /opt/flink/plugins/ 2>/dev/null || true
+              mkdir -p /opt/flink/plugins/flink-s3-fs-hadoop
+              cp /init-plugins/*.jar /opt/flink/plugins/flink-s3-fs-hadoop/ 2>/dev/null || true
               /docker-entrypoint.sh jobmanager
           ports:
             - containerPort: 6123
