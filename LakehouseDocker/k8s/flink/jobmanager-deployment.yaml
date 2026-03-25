@@ -73,9 +73,6 @@ spec:
               value: /opt/hadoop/conf
             - name: HADOOP_CLASSPATH
               value: /opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
-            - name: FLINK_PROPERTIES
-              value: |
-                jobmanager.rpc.address: flink-jobmanager
             - name: AWS_REGION
               value: us-east-1
           envFrom:

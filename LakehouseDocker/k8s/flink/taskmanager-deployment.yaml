@@ -71,12 +71,6 @@ spec:
               value: /opt/hadoop/conf
             - name: HADOOP_CLASSPATH
               value: /opt/hadoop-uber/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar
-            - name: FLINK_PROPERTIES
-              value: |
-                jobmanager.rpc.address: flink-jobmanager
-                taskmanager.numberOfTaskSlots: 4
-                taskmanager.memory.process.size: 2048m
-                taskmanager.memory.task.off-heap.size: 128m
             - name: AWS_REGION
               value: us-east-1
           envFrom:
