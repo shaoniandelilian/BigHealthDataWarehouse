@@ -87,7 +87,7 @@ spec:
               memory: 2Gi
             limits:
               cpu: "2"
-              memory: 3Gi
+              memory: 4Gi
           volumeMounts:
             - name: core-site
               mountPath: /opt/hadoop/conf/core-site.xml
