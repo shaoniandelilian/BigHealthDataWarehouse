@@ -35,8 +35,8 @@ SET 'table.dml-sync' = 'true';
 CREATE CATALOG fluss_catalog WITH (
     'type' = 'fluss',
     'bootstrap.servers' = 'fluss-coordinator:9123',
-    'paimon.s3.access-key' = '<your-oss-access-key>',
-    'paimon.s3.secret-key' = '<your-oss-secret-key>'
+    'paimon.s3.access-key' = '<your-access-key>',
+    'paimon.s3.secret-key' = '<your-secret-key>'
 );
 
 USE CATALOG fluss_catalog;

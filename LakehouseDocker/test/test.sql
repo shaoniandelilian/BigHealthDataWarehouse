@@ -67,9 +67,9 @@ CREATE TEMPORARY TABLE `source_nation` (
 CREATE CATALOG paimon_catalog WITH (
     'type' = 'paimon',
     'warehouse' = 's3://fluss/paimon',
-    's3.endpoint' = '<your-oss-endpoint>',
-    's3.access-key' = '<your-oss-access-key>',
-    's3.secret-key' = '<your-oss-secret-key>',
+    's3.endpoint' = '<your-endpoint>',
+    's3.access-key' = '<your-access-key>',
+    's3.secret-key' = '<your-secret-key>',
     's3.path.style.access' = 'false'
 );
 
@@ -163,7 +163,7 @@ CREATE TABLE enriched_orders (
 );
 
 
-SET 'parallelism.default' = '2';
+SET 'parallelism.default' = '1';
 SET 'execution.checkpointing.storage' = 'filesystem';
 SET 'execution.checkpointing.dir' = 's3://fluss/flink-checkpoints';
 SET 'execution.checkpointing.interval' = '5min';

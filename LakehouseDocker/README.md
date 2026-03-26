@@ -55,9 +55,9 @@ helm upgrade --install starrocks ./kube-starrocks-*.tgz -n starrocks --create-na
 #### 设置密钥
 
 ```sh
-grep -rl "<your-oss-access-key>" . | xargs sed -i 's/<your-oss-access-key>/真实access-key/g'
-grep -rl "<your-oss-secret-key>" . | xargs sed -i 's/<your-oss-secret-key>/真实secret-key/g'
-grep -rl "<your-oss-endpoint>" . | xargs sed -i 's/<your-oss-endpoint>/真实endpoint/g'
+grep -rl "<your-access-key>" . | xargs sed -i 's/<your-access-key>/真实access-key/g'
+grep -rl "<your-secret-key>" . | xargs sed -i 's/<your-secret-key>/真实secret-key/g'
+grep -rl "<your-endpoint>" . | xargs sed -i 's/<your-endpoint>/真实endpoint/g'
 ```
 
 #### 启动集群
@@ -106,9 +106,9 @@ CREATE EXTERNAL CATALOG paimon_catalog PROPERTIES (
     "paimon.catalog.warehouse" = "s3://fluss/paimon",
     "aws.s3.enable_ssl" = "true",
     "aws.s3.enable_path_style_access" = "false",
-    "aws.s3.endpoint" = "<your-oss-endpoint>",
-    "aws.s3.access_key" = "<your-oss-access-key>",
-    "aws.s3.secret_key" = "<your-oss-secret-key>"
+    "aws.s3.endpoint" = "<your-endpoint>",
+    "aws.s3.access_key" = "<your-access-key>",
+    "aws.s3.secret_key" = "<your-secret-key>"
 );
 ```
 

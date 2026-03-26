@@ -9,15 +9,15 @@ data:
     <configuration>
         <property>
             <name>fs.s3a.access.key</name>
-            <value><your-oss-access-key></value>
+            <value><your-access-key></value>
         </property>
         <property>
             <name>fs.s3a.secret.key</name>
-            <value><your-oss-secret-key></value>
+            <value><your-secret-key></value>
         </property>
         <property>
             <name>fs.s3a.endpoint</name>
-            <value><your-oss-endpoint></value>
+            <value><your-endpoint></value>
         </property>
         <property>
             <name>fs.s3a.path.style.access</name>
