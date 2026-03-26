@@ -3,7 +3,7 @@
 ## 组件
 
 - 计算层：Flink:1.20(流批一体)、StarRocks:3.5.14(查询引擎)
-- 存储层：AliyunOSS(对象存储)、Paimon:1.3.1(表格式层)
+- 存储层：AliyunOSS(对象存储)、Paimon:1.3.1(表格式层)、Kafka(数据采集)
 - 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
 - 元数据层：TODO...
 - 应用层：Superset:6.0.0(看板搭建)
@@ -64,6 +64,24 @@ grep -rl "<your-oss-endpoint>" . | xargs sed -i 's/<your-oss-endpoint>/真实end
 
 ```sh
 kubectl apply -k k8s
+```
+
+#### Flink 读取 Kafka 示例
+
+```sql
+CREATE TABLE ods_raw_events (
+    id STRING,
+    payload STRING,
+    ts TIMESTAMP_LTZ(3),
+    WATERMARK FOR ts AS ts - INTERVAL '5' SECOND
+) WITH (
+    'connector' = 'kafka',
+    'topic' = 'ods_raw_events',
+    'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.group.id' = 'lakehouse-ingest',
+    'scan.startup.mode' = 'earliest-offset',
+    'format' = 'json'
+);
 ```
 
 #### 调度器配置

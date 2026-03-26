@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-headless
+  namespace: lakehouse
+  labels:
+    app: kafka
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: kafka
+  ports:
+    - port: 9092
+      targetPort: broker
+      name: broker
+    - port: 9093
+      targetPort: controller
+      name: controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: lakehouse
+  labels:
+    app: kafka
+spec:
+  selector:
+    app: kafka
+  ports:
+    - port: 9092
+      targetPort: broker
+      name: broker

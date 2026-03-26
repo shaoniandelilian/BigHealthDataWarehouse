@@ -11,6 +11,10 @@ resources:
   - configmap.yaml
   - secret.yaml
 
+  # Kafka (single-node ingestion queue)
+  - kafka/service.yaml
+  - kafka/statefulset.yaml
+
   # Flink JAR dependencies
   - flink/jar-downloader-job.yaml
 
