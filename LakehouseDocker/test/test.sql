@@ -1,6 +1,6 @@
 SET 'table.exec.sink.not-null-enforcer'='DROP';
 SET 'table.exec.sink.upsert-materialize' = 'NONE';
-SET 'execution.checkpointing.interval' = '10s';
+SET 'execution.checkpointing.interval' = '1min';
 
 CREATE TEMPORARY TABLE source_order (
     `order_key` BIGINT,
@@ -163,7 +163,19 @@ CREATE TABLE enriched_orders (
 );
 
 
--- insert tuples into enriched_orders (batch join)
+SET 'parallelism.default' = '2';
+SET 'execution.checkpointing.storage' = 'filesystem';
+SET 'execution.checkpointing.dir' = 's3://fluss/flink-checkpoints';
+SET 'execution.checkpointing.interval' = '5min';
+SET 'execution.checkpointing.timeout' = '15min';
+SET 'execution.checkpointing.min-pause' = '30s';
+SET 'state.backend.type' = 'rocksdb';
+SET 'state.backend.incremental' = 'true';
+SET 'table.exec.sink.not-null-enforcer'='DROP';
+SET 'table.exec.sink.upsert-materialize' = 'NONE';
+-- SET table.exec.mini-batch.enabled = true;
+-- SET table.exec.mini-batch.allow-latency = '5s';
+-- SET table.exec.mini-batch.size = '5000';
 INSERT INTO enriched_orders
 SELECT o.order_key,
        o.cust_key,

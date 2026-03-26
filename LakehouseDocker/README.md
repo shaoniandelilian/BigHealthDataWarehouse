@@ -106,11 +106,25 @@ starrocks://root@starrocks-fe-service.lakehouse.svc.cluster.local:9030/paimon_ca
 ./sync_dags_from_github.sh
 ```
 
-#### TODO
+#### 作业优化
 
-- [x] Airflow DAGs同步git仓库
-- [ ] 比较OLAP实现方案 1. StarRocks查询Paimon 2. StarRocks查询内部 3. Flink OLAP查询
-- [ ] TB级压力测试，制造数据倾斜，优化k8s配置，设计解决方案
+1. 离线作业设置批处理模式，会自动进行批优化（广播小表等）`SET 'execution.runtime-mode' = 'batch';`
+2. 启用RocksDB将状态落盘避免堆内存溢出`SET 'state.backend.type' = 'rocksdb';` `SET 'state.backend.incremental' = 'true';`
+3. 增大并行度，将数据分散到多个TaskManager`SET 'parallelism.default' = '4';`
+4. 设置checkpoint目录为对象存储（否则默认TaskManager本地），作业失败/TaskManager故障可以从远端checkpoint重启`SET 'execution.checkpointing.dir' = 's3://fluss/flink-checkpoints';`
+5. Paimon作业设置`SET 'table.exec.sink.upsert-materialize' = 'NONE';`，因为该Flink功能与Paimon内部功能冲突
+
+##### 更多优化项
+
+```sql
+SET 'table.exec.mini-batch.enabled' = 'true';
+SET 'table.exec.mini-batch.allow-latency' = '5 s';
+SET 'table.exec.mini-batch.size' = '5000';
+
+SET 'table.optimizer.agg-phase-strategy' = 'TWO_PHASE';
+
+SET 'table.optimizer.distinct-agg.split.enabled' = 'true';
+```
 
 ---
 
