@@ -62,12 +62,16 @@ spec:
             - |
               while [ ! -f /jars/.download-complete ]; do sleep 5; done
               cp /jars/hadoop-uber/*.jar /hadoop-uber/ 2>/dev/null || true
+              cp /jars/lib/*.jar /flink-home/lib/ 2>/dev/null || true
+              cp /jars/plugins/*.jar /flink-home/plugins/ 2>/dev/null || true
           volumeMounts:
             - name: flink-jars
               mountPath: /jars
               readOnly: true
             - name: hadoop-uber
               mountPath: /hadoop-uber
+            - name: flink-home
+              mountPath: /flink-home
           resources:
             requests:
               cpu: 50m
