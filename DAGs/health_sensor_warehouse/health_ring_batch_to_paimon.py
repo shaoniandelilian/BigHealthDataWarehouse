@@ -69,9 +69,7 @@ CREATE CATALOG paimon_catalog WITH (
 
 USE CATALOG paimon_catalog;
 
-CREATE DATABASE IF NOT EXISTS bhdw_ods;
-CREATE DATABASE IF NOT EXISTS bhdw_dwd;
-CREATE DATABASE IF NOT EXISTS bhdw_dws;""",
+CREATE DATABASE IF NOT EXISTS bhdw;""",
             log_file="/tmp/health_ring_00_catalog.log",
         )
 
@@ -93,8 +91,9 @@ CREATE CATALOG paimon_catalog WITH (
 );
 
 USE CATALOG paimon_catalog;
+USE bhdw;
 
-CREATE TABLE IF NOT EXISTS bhdw_ods.survey (
+CREATE TABLE IF NOT EXISTS bhdw.ods_survey (
     `device_id`   STRING,
     `sex`         INT,
     `age`         INT,
@@ -121,7 +120,7 @@ CREATE TABLE IF NOT EXISTS bhdw_ods.survey (
     PRIMARY KEY (`device_id`) NOT ENFORCED
 );
 
-CREATE TABLE IF NOT EXISTS bhdw_ods.sleep_diary (
+CREATE TABLE IF NOT EXISTS bhdw.ods_sleep_diary (
     `user_id`          STRING,
     `record_date`      DATE,
     `go2bed`           STRING,
@@ -136,7 +135,7 @@ CREATE TABLE IF NOT EXISTS bhdw_ods.sleep_diary (
     PRIMARY KEY (`user_id`, `record_date`) NOT ENFORCED
 );
 
-CREATE TABLE IF NOT EXISTS bhdw_ods.sensor_hrv (
+CREATE TABLE IF NOT EXISTS bhdw.ods_sensor_hrv (
     `device_id`        STRING,
     `ts_start`         BIGINT,
     `ts_end`           BIGINT,
@@ -191,6 +190,7 @@ CREATE CATALOG paimon_catalog WITH (
 );
 
 USE CATALOG paimon_catalog;
+USE bhdw;
 
 CREATE TEMPORARY TABLE csv_survey (
     `device_id`   STRING,
@@ -224,7 +224,7 @@ CREATE TEMPORARY TABLE csv_survey (
     'csv.allow-comments' = 'true'
 );
 
-INSERT INTO bhdw_ods.survey SELECT * FROM csv_survey;
+INSERT INTO bhdw.ods_survey SELECT * FROM csv_survey;
 
 CREATE TEMPORARY TABLE csv_sleep_diary (
     `user_id`          STRING,
@@ -246,7 +246,7 @@ CREATE TEMPORARY TABLE csv_sleep_diary (
     'csv.allow-comments' = 'true'
 );
 
-INSERT INTO bhdw_ods.sleep_diary SELECT * FROM csv_sleep_diary;
+INSERT INTO bhdw.ods_sleep_diary SELECT * FROM csv_sleep_diary;
 
 CREATE TEMPORARY TABLE csv_sensor_hrv (
     `device_id`        STRING,
@@ -285,7 +285,7 @@ CREATE TEMPORARY TABLE csv_sensor_hrv (
     'csv.allow-comments' = 'true'
 );
 
-INSERT INTO bhdw_ods.sensor_hrv SELECT * FROM csv_sensor_hrv;""",
+INSERT INTO bhdw.ods_sensor_hrv SELECT * FROM csv_sensor_hrv;""",
             log_file="/tmp/health_ring_02_csv_to_ods.log",
         )
 
@@ -310,8 +310,9 @@ CREATE CATALOG paimon_catalog WITH (
 );
 
 USE CATALOG paimon_catalog;
+USE bhdw;
 
-CREATE TABLE IF NOT EXISTS bhdw_dwd.dim_participant (
+CREATE TABLE IF NOT EXISTS bhdw.dwd_dim_participant (
     `device_id`        STRING,
     `sex`              INT,
     `age`              INT,
@@ -343,7 +344,7 @@ CREATE TABLE IF NOT EXISTS bhdw_dwd.dim_participant (
     PRIMARY KEY (`device_id`) NOT ENFORCED
 );
 
-INSERT INTO bhdw_dwd.dim_participant
+INSERT INTO bhdw.dwd_dim_participant
 SELECT
     device_id, sex, age, marriage, occupation, smartwatch, regular,
     exercise, coffee, smoking, drinking, height, weight,
@@ -375,9 +376,9 @@ SELECT
         WHEN MEQ <= 69 THEN 'moderate_morning'
         ELSE 'definite_morning'
     END
-FROM bhdw_ods.survey;
+FROM bhdw.ods_survey;
 
-CREATE TABLE IF NOT EXISTS bhdw_dwd.sleep_detail (
+CREATE TABLE IF NOT EXISTS bhdw.dwd_sleep_detail (
     `user_id`          STRING,
     `record_date`      DATE,
     `go2bed`           STRING,
@@ -394,7 +395,7 @@ CREATE TABLE IF NOT EXISTS bhdw_dwd.sleep_detail (
     PRIMARY KEY (`user_id`, `record_date`) NOT ENFORCED
 );
 
-INSERT INTO bhdw_dwd.sleep_detail
+INSERT INTO bhdw.dwd_sleep_detail
 SELECT
     user_id, record_date, go2bed, asleep, wakeup,
     wakeup_at_night, waso, sleep_duration, in_bed_duration,
@@ -408,9 +409,9 @@ SELECT
         WHEN asleep > '01:00:00' AND asleep <= '12:00:00' THEN TRUE
         ELSE FALSE
     END
-FROM bhdw_ods.sleep_diary;
+FROM bhdw.ods_sleep_diary;
 
-CREATE TABLE IF NOT EXISTS bhdw_dwd.sensor_hrv_detail (
+CREATE TABLE IF NOT EXISTS bhdw.dwd_sensor_hrv_detail (
     `device_id`        STRING,
     `ts_start`         BIGINT,
     `ts_end`           BIGINT,
@@ -447,7 +448,7 @@ CREATE TABLE IF NOT EXISTS bhdw_dwd.sensor_hrv_detail (
     PRIMARY KEY (`device_id`, `ts_start`) NOT ENFORCED
 );
 
-INSERT INTO bhdw_dwd.sensor_hrv_detail
+INSERT INTO bhdw.dwd_sensor_hrv_detail
 SELECT
     device_id, ts_start, ts_end,
     TO_TIMESTAMP_LTZ(ts_start, 3),
@@ -471,7 +472,7 @@ SELECT
         WHEN missingness_score <= 0.5  THEN 'fair'
         ELSE 'poor'
     END
-FROM bhdw_ods.sensor_hrv;""",
+FROM bhdw.ods_sensor_hrv;""",
             log_file="/tmp/health_ring_03_dwd.log",
         )
 
@@ -496,8 +497,9 @@ CREATE CATALOG paimon_catalog WITH (
 );
 
 USE CATALOG paimon_catalog;
+USE bhdw;
 
-CREATE TABLE IF NOT EXISTS bhdw_dws.daily_activity_summary (
+CREATE TABLE IF NOT EXISTS bhdw.dws_daily_activity_summary (
     `device_id`        STRING,
     `ds`               STRING,
     `total_steps`      DOUBLE,
@@ -510,7 +512,7 @@ CREATE TABLE IF NOT EXISTS bhdw_dws.daily_activity_summary (
     PRIMARY KEY (`device_id`, `ds`) NOT ENFORCED
 );
 
-INSERT INTO bhdw_dws.daily_activity_summary
+INSERT INTO bhdw.dws_daily_activity_summary
 SELECT
     device_id, ds,
     SUM(steps),
@@ -520,10 +522,10 @@ SELECT
     ROUND(AVG(HR), 2),
     ROUND(AVG(rmssd), 2),
     COUNT(*)
-FROM bhdw_dwd.sensor_hrv_detail
+FROM bhdw.dwd_sensor_hrv_detail
 GROUP BY device_id, ds;
 
-CREATE TABLE IF NOT EXISTS bhdw_dws.daily_sleep_summary (
+CREATE TABLE IF NOT EXISTS bhdw.dws_daily_sleep_summary (
     `user_id`          STRING,
     `record_date`      DATE,
     `sleep_duration`   DOUBLE,
@@ -536,13 +538,13 @@ CREATE TABLE IF NOT EXISTS bhdw_dws.daily_sleep_summary (
     PRIMARY KEY (`user_id`, `record_date`) NOT ENFORCED
 );
 
-INSERT INTO bhdw_dws.daily_sleep_summary
+INSERT INTO bhdw.dws_daily_sleep_summary
 SELECT
     user_id, record_date, sleep_duration, sleep_efficiency,
     wakeup_at_night, waso, sleep_quality, asleep, wakeup
-FROM bhdw_dwd.sleep_detail;
+FROM bhdw.dwd_sleep_detail;
 
-CREATE TABLE IF NOT EXISTS bhdw_dws.participant_health_profile (
+CREATE TABLE IF NOT EXISTS bhdw.dws_participant_health_profile (
     `device_id`            STRING,
     `avg_daily_steps`      DOUBLE,
     `avg_sleep_duration`   DOUBLE,
@@ -559,7 +561,7 @@ CREATE TABLE IF NOT EXISTS bhdw_dws.participant_health_profile (
     PRIMARY KEY (`device_id`) NOT ENFORCED
 );
 
-INSERT INTO bhdw_dws.participant_health_profile
+INSERT INTO bhdw.dws_participant_health_profile
 SELECT
     p.device_id,
     ROUND(a.avg_daily_steps, 2),
@@ -574,7 +576,7 @@ SELECT
     p.anxiety_level,
     p.chronotype,
     p.bmi
-FROM bhdw_dwd.dim_participant p
+FROM bhdw.dwd_dim_participant p
 LEFT JOIN (
     SELECT
         device_id,
@@ -582,7 +584,7 @@ LEFT JOIN (
         AVG(avg_hr)      AS avg_hr,
         AVG(avg_rmssd)   AS avg_rmssd,
         COUNT(*)         AS total_days_tracked
-    FROM bhdw_dws.daily_activity_summary
+    FROM bhdw.dws_daily_activity_summary
     GROUP BY device_id
 ) a ON p.device_id = a.device_id
 LEFT JOIN (
@@ -590,7 +592,7 @@ LEFT JOIN (
         user_id,
         AVG(sleep_duration)   AS avg_sleep_duration,
         AVG(sleep_efficiency) AS avg_sleep_efficiency
-    FROM bhdw_dws.daily_sleep_summary
+    FROM bhdw.dws_daily_sleep_summary
     GROUP BY user_id
 ) s ON p.device_id = s.user_id;""",
             log_file="/tmp/health_ring_04_dws.log",
