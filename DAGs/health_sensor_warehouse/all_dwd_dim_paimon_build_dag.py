@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS laife_stream.dwd_trade_pay_detail (
     subject STRING, payment_type STRING, payment_time TIMESTAMP(3), PRIMARY KEY (id) NOT ENFORCED
 );
 INSERT OVERWRITE laife_stream.dwd_trade_pay_detail
-SELECT id, order_id, user_id, alipay_trade_no, total_amount, subject, payment_type, payment_time 
+SELECT id, order_id, user_id, trade_no as alipay_trade_no, total_amount, subject, payment_type, callback_time as payment_time 
 FROM laife_stream.ods_payment_info WHERE payment_status = '1602';
 
 CREATE TABLE IF NOT EXISTS laife_stream.dwd_trade_refund_detail (
