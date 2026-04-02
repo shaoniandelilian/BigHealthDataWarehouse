@@ -17,6 +17,7 @@ metadata:
   labels:
     app: jar-downloader
 spec:
+  ttlSecondsAfterFinished: 60
   backoffLimit: 5
   template:
     spec:
@@ -29,6 +30,11 @@ spec:
             - -c
             - |
               set -e
+
+              # ===== 清空旧文件 =====
+              rm -rf /jars/*
+              rm -f /jars/.download-complete
+
               mkdir -p /jars/lib /jars/opt /jars/plugins /jars/hadoop-uber
 
               download() {
