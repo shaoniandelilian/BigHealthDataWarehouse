@@ -15,7 +15,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
-from generate import DEVICE_IDS, gen_user_profile, gen_realtime, gen_history
+from generate import DEVICE_IDS, get_active_devices, gen_user_profile, gen_realtime, gen_history
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,28 +45,30 @@ def thread_user_profile(bootstrap_servers: str, topic: str, interval: int):
     producer = make_producer(bootstrap_servers)
     try:
         while not STOP.is_set():
-            for device_id in DEVICE_IDS:
+            devices = get_active_devices()
+            for device_id in devices:
                 producer.send(topic, value=gen_user_profile(device_id))
             producer.flush()
-            log.info("[user_profile] Sent %d records", len(DEVICE_IDS))
+            log.info("[user_profile] Sent %d records", len(devices))
             STOP.wait(interval)
     finally:
         producer.close()
 
 
 def thread_realtime(bootstrap_servers: str, topic: str, speed_factor: float):
-    """每 1/speed_factor 秒发一轮（所有设备）"""
+    """每 1/speed_factor 秒发一轮（随机活跃设备）"""
     producer = make_producer(bootstrap_servers)
     interval = 5.0 / speed_factor
     sent = 0
     try:
         while not STOP.is_set():
             ts = int(time.time() * 1000)
-            for device_id in DEVICE_IDS:
+            devices = get_active_devices()
+            for device_id in devices:
                 producer.send(topic, value=gen_realtime(device_id, ts))
-            sent += len(DEVICE_IDS)
-            if sent % (100 * len(DEVICE_IDS)) == 0:
-                log.info("[realtime] Sent %d records total", sent)
+            sent += len(devices)
+            if sent % 1000 < len(devices):
+                log.info("[realtime] Sent %d records total (this round: %d devices)", sent, len(devices))
             STOP.wait(interval)
     finally:
         producer.flush()
@@ -74,7 +76,7 @@ def thread_realtime(bootstrap_servers: str, topic: str, speed_factor: float):
 
 
 def thread_history(bootstrap_servers: str, topic: str, speed_factor: float):
-    """每 600/speed_factor 秒发一轮（所有设备）"""
+    """每 600/speed_factor 秒发一轮（随机活跃设备）"""
     producer = make_producer(bootstrap_servers)
     interval = 600.0 / speed_factor
     sent = 0
@@ -82,10 +84,11 @@ def thread_history(bootstrap_servers: str, topic: str, speed_factor: float):
         while not STOP.is_set():
             ts_start = int(time.time() * 1000)
             ts_end   = ts_start + 600_000
-            for device_id in DEVICE_IDS:
+            devices = get_active_devices()
+            for device_id in devices:
                 producer.send(topic, value=gen_history(device_id, ts_start, ts_end))
-            sent += len(DEVICE_IDS)
-            log.info("[history] Sent %d records total", sent)
+            sent += len(devices)
+            log.info("[history] Sent %d records total (this round: %d devices)", sent, len(devices))
             STOP.wait(interval)
     finally:
         producer.flush()

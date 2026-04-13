@@ -15,7 +15,13 @@ from typing import Any
 # 设备列表（模拟多用户）
 # ---------------------------------------------------------------------------
 
-DEVICE_IDS = [f"device_{i:04d}" for i in range(1, 600)]
+ALL_DEVICE_IDS = [f"device_{i:04d}" for i in range(1, 601)]
+DEVICE_IDS = ALL_DEVICE_IDS  # 兼容旧引用
+
+def get_active_devices() -> list[str]:
+    """每次调用返回随机子集，数量在 [200, 600] 之间"""
+    k = random.randint(200, 600)
+    return random.sample(ALL_DEVICE_IDS, k)
 
 
 # ---------------------------------------------------------------------------
