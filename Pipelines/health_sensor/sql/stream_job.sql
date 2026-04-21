@@ -158,6 +158,8 @@ CREATE TABLE IF NOT EXISTS bhdw.dim_user (
     `anxiety_level`    STRING,   -- minimal/mild/moderate/severe
     `chronotype`       STRING,   -- definite_evening/.../definite_morning
     PRIMARY KEY (`device_id`) NOT ENFORCED
+) WITH (
+    'changelog-producer' = 'lookup'
 );
 
 -- ============================================================
@@ -227,8 +229,7 @@ CREATE TABLE IF NOT EXISTS bhdw.dwd_sensor_realtime (
     `device_id`        STRING,
     `event_ts`         BIGINT,
     `event_time`       TIMESTAMP(3),
-    `ds`               STRING,          -- yyyy-MM-dd
-    `hh`               STRING,          -- HH
+    `dt`               TIMESTAMP(3),    -- 截断到小时整点，便于 Superset 时间筛选
     `heart_rate`       INT,
     `avg_heart_rate`   INT,
     `steps`            INT,
@@ -239,6 +240,8 @@ CREATE TABLE IF NOT EXISTS bhdw.dwd_sensor_realtime (
     `hr_zone`          STRING,          -- rest/fat_burn/cardio/peak
     `is_active`        BOOLEAN,         -- activity_level >= 1 且 wearing=1
     PRIMARY KEY (`device_id`, `event_ts`) NOT ENFORCED
+) WITH (
+    'changelog-producer' = 'lookup'
 );
 
 -- 历史分钟级宽表：加活动强度文本、HRV质量标签
@@ -247,8 +250,7 @@ CREATE TABLE IF NOT EXISTS bhdw.dwd_sensor_history_min (
     `ts_start`           BIGINT,
     `ts_end`             BIGINT,
     `event_time`         TIMESTAMP(3),
-    `ds`                 STRING,
-    `hh`                 STRING,
+    `dt`                 TIMESTAMP(3),   -- 截断到小时整点，便于 Superset 时间筛选
     `heart_rate_min`     DOUBLE,
     `rmssd`              DOUBLE,
     `sdnn`               DOUBLE,
@@ -266,6 +268,8 @@ CREATE TABLE IF NOT EXISTS bhdw.dwd_sensor_history_min (
     `hrv_quality`        STRING,        -- excellent/good/fair/poor
     `spo2_status`        STRING,        -- normal/low/critical
     PRIMARY KEY (`device_id`, `ts_start`) NOT ENFORCED
+) WITH (
+    'changelog-producer' = 'lookup'
 );
 
 -- ============================================================
@@ -274,8 +278,7 @@ CREATE TABLE IF NOT EXISTS bhdw.dwd_sensor_history_min (
 
 CREATE TABLE IF NOT EXISTS bhdw.dws_device_report_1h (
     `device_id`          STRING,
-    `ds`                 STRING,
-    `hh`                 STRING,
+    `dt`                 TIMESTAMP(3),   -- 小时整点时间戳，便于 Superset 时间筛选
     -- 来自实时流聚合
     `avg_hr_realtime`    DOUBLE,        -- 小时内平均心率（秒级）
     `total_steps_rt`     BIGINT,        -- 小时内累计步数（秒级）
@@ -298,7 +301,7 @@ CREATE TABLE IF NOT EXISTS bhdw.dws_device_report_1h (
     `depression_level` STRING,
     `anxiety_level`    STRING,
     `chronotype`       STRING,
-    PRIMARY KEY (`device_id`, `ds`, `hh`) NOT ENFORCED
+    PRIMARY KEY (`device_id`, `dt`) NOT ENFORCED
 );
 
 -- ============================================================
@@ -380,8 +383,7 @@ SELECT
     device_id,
     event_ts,
     event_time,
-    DATE_FORMAT(event_time, 'yyyy-MM-dd')   AS ds,
-    DATE_FORMAT(event_time, 'HH')           AS hh,
+    FLOOR(event_time TO HOUR)                   AS dt,
     heart_rate,
     avg_heart_rate,
     steps,
@@ -402,8 +404,7 @@ SELECT
     device_id,
     ts_start, ts_end,
     TO_TIMESTAMP_LTZ(ts_start, 3)                              AS event_time,
-    DATE_FORMAT(TO_TIMESTAMP_LTZ(ts_start, 3), 'yyyy-MM-dd')   AS ds,
-    DATE_FORMAT(TO_TIMESTAMP_LTZ(ts_start, 3), 'HH')           AS hh,
+    FLOOR(TO_TIMESTAMP_LTZ(ts_start, 3) TO HOUR)             AS dt,
     heart_rate_min, rmssd, sdnn, pnn50, lf_hf_ratio,
     spo2, resp_rate, skin_temp,
     steps_min, activity_level_min, posture_min, wearing_ratio,
@@ -433,8 +434,7 @@ FROM bhdw.ods_sensor_history;
 INSERT INTO bhdw.dws_device_report_1h
 SELECT
     COALESCE(r.device_id, h.device_id)  AS device_id,
-    COALESCE(r.ds, h.ds)                AS ds,
-    COALESCE(r.hh, h.hh)               AS hh,
+    COALESCE(r.dt, h.dt)               AS dt,
     r.avg_hr_realtime,
     r.total_steps_rt,
     r.active_seconds,
@@ -457,17 +457,17 @@ SELECT
     u.chronotype
 FROM (
     SELECT
-        device_id, ds, hh,
+        device_id, dt,
         ROUND(AVG(heart_rate), 2)                   AS avg_hr_realtime,
         CAST(MAX(steps) AS BIGINT)                  AS total_steps_rt,
         SUM(CASE WHEN is_active THEN 1 ELSE 0 END)  AS active_seconds,
         SUM(CASE WHEN wearing = 1 THEN 1 ELSE 0 END) AS wearing_seconds
     FROM bhdw.dwd_sensor_realtime
-    GROUP BY device_id, ds, hh
+    GROUP BY device_id, dt
 ) r
 FULL OUTER JOIN (
     SELECT
-        device_id, ds, hh,
+        device_id, dt,
         ROUND(AVG(rmssd), 2)                        AS avg_rmssd,
         ROUND(AVG(spo2), 2)                         AS avg_spo2,
         ROUND(AVG(resp_rate), 2)                    AS avg_resp_rate,
@@ -477,8 +477,8 @@ FULL OUTER JOIN (
         LAST_VALUE(posture_min)                     AS dominant_posture,
         LAST_VALUE(hrv_quality)                     AS hrv_quality
     FROM bhdw.dwd_sensor_history_min
-    GROUP BY device_id, ds, hh
+    GROUP BY device_id, dt
 ) h
-ON r.device_id = h.device_id AND r.ds = h.ds AND r.hh = h.hh
+ON r.device_id = h.device_id AND r.dt = h.dt
 LEFT JOIN bhdw.dim_user u
     ON COALESCE(r.device_id, h.device_id) = u.device_id;

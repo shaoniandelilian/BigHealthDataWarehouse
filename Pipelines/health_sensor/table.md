@@ -50,7 +50,7 @@
 
 | 表名 | 说明 | 主键 |
 |------|------|------|
-| `dws_device_report_1h` | 设备每小时综合报告（实时+历史融合聚合） | device_id, ds, hh |
+| `dws_device_report_1h` | 设备每小时综合报告（实时+历史融合聚合） | device_id, dt |
 
 **总计 7 张 Paimon 持久化表**
 
