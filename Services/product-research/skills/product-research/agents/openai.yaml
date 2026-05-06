@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Research"
+  short_description: "Structure product research"
+  default_prompt: "Use $product-research to turn this product-development request into a structured research workflow and output."

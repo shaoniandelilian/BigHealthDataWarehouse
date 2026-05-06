@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-research
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-research
+  template:
+    metadata:
+      labels:
+        app: product-research
+    spec:
+      containers:
+        - name: app
+          image: product-research:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5001
+          volumeMounts:
+            - name: data
+              mountPath: /app/conversations
+              subPath: conversations
+            - name: data
+              mountPath: /app/tasks
+              subPath: tasks
+            - name: data
+              mountPath: /app/logs
+              subPath: logs
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: product-research-data

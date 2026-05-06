@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦞 市场调研系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/table.css">
+</head>
+<body>
+    <div class="app">
+        <!-- 侧栏：历史会话 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sb-header">
+                <h1>🦞 调研系统</h1>
+                <span class="sb-badge">Scrapling × Product Research</span>
+            </div>
+            <div class="sb-actions">
+                <button class="sb-new-btn" onclick="backToInput()">✨ 新建调研</button>
+                <button class="sb-clear-btn" onclick="clearAllRecords()">🗑️ 清空所有记录</button>
+            </div>
+            <div class="sb-list" id="chatList">
+                <div class="sb-empty">暂无历史记录</div>
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="main" id="mainArea">
+            <!-- 输入页（默认视图） -->
+            <div class="input-view" id="inputView">
+                <div class="hero">
+                    <div class="hero-icon">🔬</div>
+                    <h2>自动化调研</h2>
+                    <p>输入研究主题，自动完成数据采集、结构化分析与报告生成</p>
+                </div>
+
+                <div class="input-box-wrap">
+                    <textarea id="topicInput" placeholder="输入你的研究主题，例如：&#10;&#10;• 更年期/围绝经期女性功能性口服产品&#10;• 女性睡眠改善补充剂 市场分析&#10;• 益生菌+肠道健康 功能性食品&#10;• 抗衰老口服美容产品 竞品拆解" rows="6"></textarea>
+                    <button class="btn-submit" id="submitBtn" onclick="submitTopic()">
+                        🔍 开始调研
+                    </button>
+                </div>
+            </div>
+
+            <!-- 结果页（提交后显示） -->
+            <div class="result-view hidden" id="resultView">
+                <div class="result-header">
+                    <h3 id="resultTitle">正在调研...</h3>
+                </div>
+
+                <!-- 状态：处理中 -->
+                <div class="status-card" id="statusCard">
+                    <div class="spinner" id="spinner"></div>
+                    <p id="statusText">已提交，等待调研结果...</p>
+                    <button class="btn-cancel" id="cancelBtn" onclick="cancelResearch()">⏹ 终止调研</button>
+                </div>
+
+                <!-- 状态：完成 → 预览表格 + 下载 -->
+                <div class="report-result hidden" id="reportResult">
+                    <div class="table-section">
+                        <div class="table-header">
+                            <h4>数据预览</h4>
+                            <span class="table-count" id="tableCount"></span>
+                        </div>
+                        <div class="table-wrapper" id="tableWrapper">
+                            <table class="data-table" id="dataTable">
+                                <thead id="dataThead"></thead>
+                                <tbody id="dataTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 下载区域 -->
+                    <div class="download-area hidden" id="downloadArea">
+                        <div class="dl-buttons">
+                            <a class="dl-btn dl-json" id="dlJsonBtn" href="#" download>📄 JSON 报告</a>
+                            <a class="dl-btn dl-excel" id="dlExcelBtn" href="#" download>📊 Excel 报告</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态：错误 -->
+                <div class="error-card hidden" id="errorCard">
+                    <p id="errorText">❌ 处理出错</p>
+                    <button class="btn-retry" onclick="retryCurrent()">重试</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

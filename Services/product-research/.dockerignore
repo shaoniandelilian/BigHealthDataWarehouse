@@ -1,0 +1,6 @@
+.venv
+product-research-app/.venv
+k8s
+*.sh.log
+__pycache__
+.git
