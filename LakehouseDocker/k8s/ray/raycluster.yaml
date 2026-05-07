@@ -1,0 +1,96 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: ray
+  namespace: lakehouse
+  labels:
+    app: ray
+spec:
+  rayVersion: '2.52.0'
+  enableInTreeAutoscaling: true
+  autoscalerOptions:
+    upscalingMode: Default
+    idleTimeoutSeconds: 300
+    resources:
+      requests: { cpu: 500m, memory: 512Mi }
+      limits:   { cpu: "1",  memory: 1Gi }
+
+  headGroupSpec:
+    rayStartParams:
+      num-cpus: "0"
+    template:
+      metadata:
+        labels:
+          app: ray-head
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.52.0
+            ports:
+              - containerPort: 6379
+                name: gcs
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+            resources:
+              requests: { cpu: "1", memory: 2Gi }
+              limits:   { cpu: "2", memory: 4Gi }
+
+  workerGroupSpecs:
+    - groupName: cpu-workers
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 8
+      rayStartParams:
+        num-cpus: "2"
+      template:
+        metadata:
+          labels:
+            app: ray-cpu-worker
+        spec:
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.52.0
+              resources:
+                requests: { cpu: 500m, memory: 2Gi }
+                limits:   { cpu: "2",  memory: 6Gi }
+              envFrom:
+                - secretRef:
+                    name: s3-credentials
+
+    # GPU worker 组默认不启动，集群有 GPU 节点时调大 minReplicas
+    - groupName: gpu-workers
+      replicas: 0
+      minReplicas: 0
+      maxReplicas: 4
+      rayStartParams:
+        num-gpus: "1"
+      template:
+        metadata:
+          labels:
+            app: ray-gpu-worker
+        spec:
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.52.0-gpu
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: 16Gi
+                  nvidia.com/gpu: 1
+                limits:
+                  cpu: "8"
+                  memory: 32Gi
+                  nvidia.com/gpu: 1
+              envFrom:
+                - secretRef:
+                    name: s3-credentials
+              volumeMounts:
+                - name: dshm
+                  mountPath: /dev/shm
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 8Gi

@@ -18,7 +18,7 @@ MONGO_URI = "mongodb://admin:strongpassword@47.98.227.81:8060"
 MONGO_DB = "health_archives"
 MONGO_COLLECTION = "phdata"
 
-S3_ENDPOINT = "https://oss-cn-hangzhou-internal.aliyuncs.com"
+S3_ENDPOINT = "<your-endpoint>"
 S3_ACCESS_KEY = "<your-access-key>"
 S3_SECRET_KEY = "<your-secret-key>"
 OSS_BUCKET = "fluss"

@@ -2,7 +2,7 @@
 
 ## 组件
 
-- 计算层：Flink:1.20(流批一体)、StarRocks:3.5.14(查询引擎)
+- 计算层：Flink:1.20(流批一体)、StarRocks:3.5.14(查询引擎)、Ray:2.52.0(多模态计算)
 - 存储层：AliyunOSS(对象存储)、Paimon:1.3.1(表格式层)、Kafka(数据采集)
 - 调度层：Airflow:2.11.2(离线调度)、Streampark:2.1.5(实时调度)
 - 元数据层：TODO...
@@ -146,6 +146,26 @@ SET 'table.optimizer.distinct-agg.split.enabled' = 'true';
 
 ---
 
+#### 安装 KubeRay Operator
+
+1. 在有外网环境的主机添加 Helm repo
+
+```sh
+helm repo add kuberay https://ray-project.github.io/kuberay-helm/
+```
+
+2. 在服务器安装 KubeRay operator
+
+```sh
+helm install kuberay-operator kuberay/kuberay-operator \
+  --version 1.6.0 \
+  --namespace lakehouse
+```
+
+> [!NOTE]
+> Ray 集群（RayCluster CRD）随 `kubectl apply -k k8s` 一同部署。
+> GPU 节点需预先安装 NVIDIA device plugin，之后将 `raycluster.yaml` 中 `gpu-workers.minReplicas` 改为 1。
+
 #### 访问入口
 
 - Airflow WebUI: `http://<node-ip>:30080`
@@ -153,12 +173,15 @@ SET 'table.optimizer.distinct-agg.split.enabled' = 'true';
 - Superset WebUI: `http://<node-ip>:30088`
 - StarRocks FE HTTP: `http://<node-ip>:30830`
 - StarRocks FE MySQL: `<node-ip>:30930`
+- Ray Dashboard: `http://<node-ip>:8265`  (kubectl port-forward svc/ray-head-svc 8265 -n lakehouse)
 
 > [!NOTE]
 > Airflow默认账号密码：admin admin
 > StreamPark默认账号密码：admin streampark
 > Superset默认账号密码：admin admin123
 > StarRocks默认账号密码：root 无
+> Ray Dashboard 无需认证
 
 > [!TIP]
 > 部署后可以用`./test.sql`测试Flink+Paimon
+> Ray 集群健康检查：`kubectl exec -it deploy/raycluster-ray-head -n lakehouse -- ray status`

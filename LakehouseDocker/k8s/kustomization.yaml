@@ -54,3 +54,6 @@ resources:
   - starrocks/operator.yaml
   - starrocks/cluster.yaml
   - starrocks/service.yaml
+
+  # Ray (multimodal compute, via KubeRay operator)
+  - ray/raycluster.yaml
