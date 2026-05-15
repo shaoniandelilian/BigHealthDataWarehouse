@@ -1,0 +1,79 @@
+version: "3.8"
+
+services:
+  # ---- 中间件 ----
+  mongodb:
+    image: mongo:7.0
+    container_name: laife-mongo
+    ports:
+      - "8060:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: test123
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet -u admin -p test123
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    container_name: laife-postgres
+    ports:
+      - "8070:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: test123
+      POSTGRES_DB: laife_ai
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d laife_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---- 应用容器 ----
+  laife-app:
+    build:
+      context: ..
+      dockerfile: docker-test/Dockerfile
+    container_name: laife-deploy-test
+    ports:
+      - "8002:8002"
+      - "8010:8010"
+      - "8011:8011"
+      - "8013:8013"
+      - "8014:8014"
+      - "8015:8015"
+      # 不映射 GPU 服务端口
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - app-logs:/opt/laife/logs
+      - app-data:/opt/laife/data
+      - ../docker-test/test-deploy-non-gpu.sh:/opt/laife/bin/test-deploy-non-gpu.sh:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    # 容器启动后执行测试脚本
+    command: >
+      bash -c "
+        echo '等待中间件就绪...' &&
+        sleep 3 &&
+        apt-get update -qq && apt-get install -y -qq iproute2 sudo 2>&1 | tail -1 || true &&
+        echo 'root ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/laife-docker 2>/dev/null || true &&
+        bash /opt/laife/bin/test-deploy-non-gpu.sh
+      "
+    stdin_open: true
+    tty: true
+
+volumes:
+  mongo-data:
+  pg-data:
+  app-logs:
+  app-data:

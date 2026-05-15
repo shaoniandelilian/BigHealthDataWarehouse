@@ -1,0 +1,25 @@
+[Unit]
+Description=Laife realtime_rag (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Slice=laife-base.slice
+User=laife
+Group=laife
+WorkingDirectory=/opt/laife/apps/realtime-rag
+EnvironmentFile=/opt/laife/config/services.env
+EnvironmentFile=/opt/laife/config/secrets.env
+ExecStart=/opt/laife/bin/launch-rag-%i.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/opt/laife/logs/realtime-rag/%i.log
+StandardError=append:/opt/laife/logs/realtime-rag/%i.err
+LimitNOFILE=65535
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/laife/data /opt/laife/logs /opt/laife/apps
+
+[Install]
+WantedBy=multi-user.target

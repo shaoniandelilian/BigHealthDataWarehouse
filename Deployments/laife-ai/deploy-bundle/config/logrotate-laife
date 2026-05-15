@@ -1,0 +1,10 @@
+/opt/laife/logs/*/*.log /opt/laife/logs/*/*.err {
+  daily
+  rotate 14
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+  su laife laife
+}
